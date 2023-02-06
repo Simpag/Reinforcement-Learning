@@ -13,7 +13,7 @@ num_actions = env.action_space.n
 state_size = env.observation_space.shape
 
 # Load the model
-model = load_model("models\snake_model_4000.h5")
+model = load_model("models/snake_model_6000.h5")
 
 # Define the testing function
 def test(model, episodes):

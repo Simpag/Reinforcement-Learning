@@ -11,7 +11,7 @@ class SquareGrid(BaseGrid):
         return Action4.forward
 
     def get_random_direction(self):
-        return Direction4(self.np_random.randint(0, len(Direction4)))
+        return Direction4(self.np_random.integers(0, len(Direction4)))
 
     def get_renderer_dimensions(self, tile_size):
         return self.width * tile_size, self.height * tile_size

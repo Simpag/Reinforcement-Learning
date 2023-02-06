@@ -120,8 +120,8 @@ class BaseGrid:
         self.snakes = []
 
         for i in range(num_snakes):
-            x = self.np_random.randint(0, self.width)
-            y = self.np_random.randint(0, self.height)
+            x = self.np_random.integers(0, self.width)
+            y = self.np_random.integers(0, self.height)
             direction = self.get_random_direction()
 
             rotated_green = rotate_color(0, 255, 0, i / num_snakes)
@@ -145,7 +145,7 @@ class BaseGrid:
 
     def _add_one_apple(self):
         while True:
-            p = (self.np_random.randint(0, self.width), self.np_random.randint(0, self.height))
+            p = (self.np_random.integers(0, self.width), self.np_random.integers(0, self.height))
             if self.is_blocked(p) or p in self.apples:
                 continue
 
