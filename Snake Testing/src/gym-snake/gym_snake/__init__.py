@@ -58,6 +58,10 @@ register(
     entry_point='gym_snake.envs:Snake_16x16'
 )
 register(
+    id='Snake-16x16-big-apple-reward-v0',
+    entry_point='gym_snake.envs:Snake_16x16_Big_Apple_Reward'
+)
+register(
     id='Snake-Hex-16x16-v0',
     entry_point='gym_snake.envs:Snake_Hex_16x16'
 )

@@ -5,12 +5,18 @@ import gym_snake
 from keras.models import Sequential, save_model, load_model
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout
 from keras.optimizers import Adam
+from keras import backend as K
+import gc
 from datetime import datetime
 from alive_progress import alive_bar
 
+#import os
+# https://stackoverflow.com/questions/40426502/is-there-a-way-to-suppress-the-messages-tensorflow-prints/40426709
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+
 # Create the environment
-#env = gym.make("Snake-16x16_Custom-v0") 
-env = gym.make("Snake-16x16-v0") 
+env = gym.make("Snake-16x16-big-apple-reward-v0") 
+#env = gym.make("Snake-16x16-v0") 
 
 # Get the number of actions and states
 num_actions = env.action_space.n
@@ -44,13 +50,14 @@ if True:
     model.add(Dense(num_actions, activation='linear'))
     model.compile(loss='mse', optimizer=Adam(learning_rate=0.001), metrics=['accuracy'])
 else:
-    model = load('snake_model_2000.h5')
+    model = load('models/snake_model_6000.h5')
 
 # Define the Q-learning algorithm
-def q_learning(episodes):
+def q_learning(episodes, iteration):
     epsilon = 0.9
-    with alive_bar(episodes) as bar:
+    with alive_bar(episodes, title=f'Run: {iteration}') as bar:
         for episode in range(episodes):
+            stepCount = 0
             state = env.reset()
             state = np.reshape(state, [1, state_size[0], state_size[1], state_size[2]])
             done = False
@@ -68,16 +75,27 @@ def q_learning(episodes):
                 target_vec[action] = target
                 model.fit(state, target_vec.reshape(-1, num_actions), epochs=1, verbose=0)
                 state = next_state
-                #env.render('human')
+
+                stepCount += 1
+
+                if stepCount > 100:
+                    env.render('human')
             epsilon *= 0.95
+            if episode % 100 == 0: 
+                gc.collect()        # without this I get mad memory leak
+                K.clear_session()   # without this I get mad memory leak
             bar()
         env.close()
 
 
 for i in range(1,20):
     # Train the model
-    q_learning(2000)
+    q_learning(1000, i)
 
     # Save the trained model
     #save(model, f"snake_model_{str(datetime.now().replace(microsecond=0)).replace(':', '-').replace(' ', '_')}.h5")
-    save(model, f"snake_model_{i*2000}.h5")
+    save(model, f"snake_model_{i*1000}.h5")
+
+
+# export PATH=/usr/local/cuda/bin:$PATH enable cuda or sm shit
+# export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
