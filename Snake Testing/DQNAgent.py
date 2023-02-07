@@ -14,7 +14,7 @@ from keras import backend as K
 import gc
 
 class DQNAgent():
-    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str) -> None:
+    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None) -> None:
         # DQ variables
         self.DISCOUNT = DISCOUNT
         self._lr = LEARNING_RATE
@@ -31,15 +31,19 @@ class DQNAgent():
         self.target_update_counter = 0
 
         # Main model
-        self.model = self.create_model(ENV)
+        if MODEL_TO_LOAD is None:
+            self.model = self.create_model(ENV)
+            self.target_model = self.create_model(ENV) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
+        else:
+            self.model = self.load(MODEL_TO_LOAD)
+            self.target_model = self.load(MODEL_TO_LOAD) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
 
         # Target network | Used for predicting so we dont "overfit", initially the network will fluctuate a lot
-        self.target_model = self.create_model(ENV) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
 
-        self._clear_memory_at = 500
-        self._clear_memory_counter = 0
+        self._clear_memory_at = 20
+        self._clear_memory_counter = 1
 
     def create_model(self, env: gym.Env):
         model = Sequential()
@@ -134,3 +138,7 @@ class DQNAgent():
             os.makedirs('models')
         save_model(self.model, 'models/' + filename)
         print(f"saved model at: {'models/' + filename}")
+
+    def load(self, filename):
+        print(f"Loaded model: {filename}")
+        return load_model(filename)

@@ -12,17 +12,18 @@ import gym_snake
 
 def main():
     # Model settings
+    MODEL_TO_LOAD = "models/Snake_16x16__episode_9000_1675770901.model" # Load model from file
     TARGET_MODEL_UPDATE_CYCLE = 5   # Number of terminal states before updating target model
-    REPLAY_MEMORY_SIZE = 50_000     # How big the batch size should be
+    REPLAY_MEMORY_SIZE = 25_000     # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000  # Number of steps recorded before training starts
     MODEL_NAME = "Snake_16x16"
 
     # Training settings
     EPISODES = 20_000               # Total training episodes
-    MINIBATCH_SIZE = 64             # How many steps to use for training
+    MINIBATCH_SIZE = 32             # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 1                  # Save model that reaches min reward
+    MIN_REWARD = 0                  # Save model that reaches min reward
     AGGREGATE_STATS_EVERY = 50      # When to record data to plot how it performs
     SHOW_PREVIEW = False            # Show preview of agent playing
 
@@ -32,7 +33,7 @@ def main():
 
     # Exploration settings
     epsilon = 1                     # Not a constant, going to be decayed
-    EPSILON_DECAY = 0.95 #0.99975
+    EPSILON_DECAY = 0.99975 #0.95
     MIN_EPSILON = 0.001
 
     # For more repetitive results
@@ -47,7 +48,7 @@ def main():
     #env = gym.make("Snake-16x16-big-apple-reward-v0") 
     env = gym.make("Snake-16x16-v0") 
 
-    agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME)
+    agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
         # Update tensorboard step every episode
@@ -95,9 +96,13 @@ def main():
             max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
             agent.tensorboard.update_stats(reward_avg=average_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
 
-            # Save model, but only when min reward is greater or equal a set value
-            if min_reward >= MIN_REWARD:
+            # Save model, but only when reward is greater or equal a set value
+            if average_reward >= MIN_REWARD:
                 agent.save(f'{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+
+        if not episode % 1000:
+            agent.save(f'{MODEL_NAME}__episode_{episode}_{int(time.time())}.model')
+
 
         # Decay epsilon, exponential
         if epsilon > MIN_EPSILON:
