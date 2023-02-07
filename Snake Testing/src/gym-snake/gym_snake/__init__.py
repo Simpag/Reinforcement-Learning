@@ -1,5 +1,5 @@
 from gym_snake.register import register
-
+""" disable annoying printing
 for num_players in ['', '2s', '3s', '4s']:
     for style in ['DeadApple', '', 'Expand', '4a']:
         for grid_size in ['4x4', '8x8', '16x16']:
@@ -12,7 +12,7 @@ for num_players in ['', '2s', '3s', '4s']:
                 print(")")
 
                 pass
-
+"""
 register(
     id='Snake-4x4-DeadApple-v0',
     entry_point='gym_snake.envs:Snake_4x4_DeadApple'
