@@ -8,31 +8,36 @@ import tensorflow as tf
 import gym
 import gym_snake
 
+# To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
 def main():
+    # Custom env settings
+    GIVE_NEGATIVE_REWARD_AFTER = 100    # How many steps before giving the model a negative reward, resets if the reward from step is positive
+    NEGATIVE_REWARD = 5                 # Negative reward to give
+
     # Model settings
-    MODEL_TO_LOAD = "models/Snake_16x16__episode_9000_1675770901.model" # Load model from file
-    TARGET_MODEL_UPDATE_CYCLE = 5   # Number of terminal states before updating target model
-    REPLAY_MEMORY_SIZE = 25_000     # How big the batch size should be
-    MIN_REPLAY_MEMORY_SIZE = 1_000  # Number of steps recorded before training starts
+    MODEL_TO_LOAD = "models/Snake_16x16__episode_2000_1675785606.model"                # Load model from file
+    TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
+    REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
+    MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
     MODEL_NAME = "Snake_16x16"
 
     # Training settings
-    EPISODES = 20_000               # Total training episodes
-    MINIBATCH_SIZE = 32             # How many steps to use for training
+    EPISODES = 20_000                   # Total training episodes
+    MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 0                  # Save model that reaches min reward
-    AGGREGATE_STATS_EVERY = 50      # When to record data to plot how it performs
-    SHOW_PREVIEW = False            # Show preview of agent playing
+    MIN_REWARD = 0                      # Save model that reaches min reward
+    AGGREGATE_STATS_EVERY = 50          # When to record data to plot how it performs
+    SHOW_PREVIEW = False                # Show preview of agent playing
 
     # DQ-settings
-    DISCOUNT = 0.99                 # gamma (discount factor)
+    DISCOUNT = 0.99                     # gamma (discount factor)
     LEARNING_RATE = 0.001
 
     # Exploration settings
-    epsilon = 1                     # Not a constant, going to be decayed
+    epsilon = 0.5558#1                         # Not a constant, going to be decayed
     EPSILON_DECAY = 0.99975 #0.95
     MIN_EPSILON = 0.001
 
@@ -55,6 +60,7 @@ def main():
         agent.tensorboard.step = episode
 
         # Restarting episode - reset episode reward and step number
+        steps_without_reward = 0
         episode_reward = 0
         step = 1
 
@@ -64,16 +70,23 @@ def main():
         # Reset flag and start iterating until episode ends
         done = False
         while not done:
-
-            # This part stays mostly the same, the change is to query a model for Q values
             if np.random.random() > epsilon:
-                # Get action from Q table
+                # Get action from DQN
                 action = np.argmax(agent.get_qs(current_state))
             else:
                 # Get random action
                 action = np.random.randint(0, env.action_space.n)
 
             new_state, reward, done, truncated = env.step(action)
+
+            if reward < 1:
+                steps_without_reward += 1
+            else:
+                steps_without_reward = 0
+
+            if GIVE_NEGATIVE_REWARD_AFTER < steps_without_reward:
+                steps_without_reward = 0
+                reward -= NEGATIVE_REWARD
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -101,7 +114,7 @@ def main():
                 agent.save(f'{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
         if not episode % 1000:
-            agent.save(f'{MODEL_NAME}__episode_{episode}_{int(time.time())}.model')
+            agent.save(f'{MODEL_NAME}__episode_{episode}_{epsilon}epsilon_{int(time.time())}.model')
 
 
         # Decay epsilon, exponential
