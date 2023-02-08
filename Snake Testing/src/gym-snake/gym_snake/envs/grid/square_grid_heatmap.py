@@ -66,6 +66,8 @@ class SquareGrid(BaseGrid):
         elif d < 10:
             return 1
 
+        return 0
+
 
     def get_forward_action(self):
         return Action4.forward
