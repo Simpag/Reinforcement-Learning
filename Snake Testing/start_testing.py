@@ -73,13 +73,13 @@ if __name__ == "__main__":
             elif currentArgument in ("-e", "--Env"):
                 env_name = currentValue
 
-        if env_name is None or file_name is None:
-            print("Wrong input")
-            print("python start_testing.py -f FILE_NAME -e ENV_NAME")
-            print("Example: python start_testing.py -f models/Snake_16x16_____9.00max____0.18avg___-1.00min__1675760303.model/ -e Snake-16x16-v0")
-            exit()
-
-        start_test(file_name, env_name)
+        if file_name is not None:
+            if env_name is None: 
+                print("Wrong input")
+                print("python start_testing.py -f FILE_NAME -e ENV_NAME")
+                print("Example: python start_testing.py -f models/Snake_16x16_____9.00max____0.18avg___-1.00min__1675760303.model/ -e Snake-16x16-v0")
+            else: 
+                start_test(file_name, env_name)
                 
                 
     except getopt.error as err:
