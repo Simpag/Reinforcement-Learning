@@ -59,11 +59,11 @@ class SquareGrid(BaseGrid):
 
         d = (head[0] - apple[0])**2 + (head[1] - apple[1])**2 # Square distance to skip on square root calculation
         
-        if d == 1:
-            return self.reward_apple - 1
-        elif d < 5:
-            return self.reward_apple - 2
-        elif d < 10:
+        if d == 1: # one move away
+            return max(self.reward_apple//2, 0)
+        elif d < 5: # 2 moves away
+            return max(self.reward_apple//4, 0)
+        elif d < 10: # 3 moves away
             return 1
 
         return 0
