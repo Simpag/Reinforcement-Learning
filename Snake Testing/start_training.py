@@ -17,11 +17,11 @@ def main():
     NEGATIVE_REWARD = 5                 # Negative reward to give
 
     # Model settings
-    MODEL_TO_LOAD = "models/Snake_16x16__episode_2000_1675785606.model"                # Load model from file
+    MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
-    MODEL_NAME = "Snake_16x16"
+    MODEL_NAME = "16x16_5negative_reward"
 
     # Training settings
     EPISODES = 20_000                   # Total training episodes
@@ -37,7 +37,7 @@ def main():
     LEARNING_RATE = 0.001
 
     # Exploration settings
-    epsilon = 0.5558#1                         # Not a constant, going to be decayed
+    epsilon = 1                         # Not a constant, going to be decayed
     EPSILON_DECAY = 0.99975 #0.95
     MIN_EPSILON = 0.001
 
@@ -114,7 +114,7 @@ def main():
                 agent.save(f'{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
         if not episode % 1000:
-            agent.save(f'{MODEL_NAME}__episode_{episode}_{epsilon}epsilon_{int(time.time())}.model')
+            agent.save(f'{MODEL_NAME}_episode_{episode}_{epsilon}epsilon_{int(time.time())}.model')
 
 
         # Decay epsilon, exponential
