@@ -43,6 +43,10 @@ class Snake_16x16_Big_Apple_Reward(SnakeEnv):
     def __init__(self):
         super().__init__(grid_size=16, reward_apple=10)
 
+class Snake_16x16_Heatmap(SnakeEnv):
+    def __init__(self):
+        super().__init__(grid_size=16, reward_apple=5)
+
 class Snake_Hex_4x4(SnakeEnv):
     def __init__(self):
         super().__init__(grid_type=GridType.hex, grid_size=4, initial_snake_size=2)

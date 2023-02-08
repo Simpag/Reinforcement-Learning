@@ -35,6 +35,9 @@ class Snake:
     def __len__(self):
         return len(self._deque)
 
+    def get_head_pos(self):
+        return self._deque[-1]
+
     def next_head(self, action):
         head = self._deque[-1]
         direction = self._direction.add_action(action)
@@ -85,6 +88,9 @@ class Apples:
 
     def remove(self, p):
         self._set.remove(p)
+
+    def get_pos(self):
+        return self._set[0]
 
     def render(self, cell_renderer):
         for p in self._set:
