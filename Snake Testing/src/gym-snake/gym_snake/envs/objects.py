@@ -90,7 +90,9 @@ class Apples:
         self._set.remove(p)
 
     def get_pos(self):
-        return self._set[0]
+        e = self._set.pop()
+        self._set.add(e)
+        return e
 
     def render(self, cell_renderer):
         for p in self._set:

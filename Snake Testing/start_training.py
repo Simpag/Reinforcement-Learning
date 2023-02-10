@@ -4,6 +4,7 @@ from DQNAgent import DQNAgent
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
+import keyboard
 
 import gym
 import gym_snake
@@ -13,22 +14,22 @@ import gym_snake
 
 def main():
     # Custom env settings
-    GIVE_NEGATIVE_REWARD_AFTER = 100    # How many steps before giving the model a negative reward, resets if the reward from step is positive
-    NEGATIVE_REWARD = 5                 # Negative reward to give
+    GIVE_NEGATIVE_REWARD_AFTER = 1000   # How many steps before giving the model a negative reward, resets if the reward from step is positive
+    NEGATIVE_REWARD = 0                 # Negative reward to give
 
     # Model settings
+    MODEL_NAME = "16x16_heatmap_big_reward_smalln"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
-    MODEL_NAME = "16x16_heatmap"
 
     # Training settings
     EPISODES = 20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 0                      # Save model that reaches min reward
+    MIN_REWARD = 20                     # Save model that reaches min avg reward
     AGGREGATE_STATS_EVERY = 50          # When to record data to plot how it performs
     SHOW_PREVIEW = False                # Show preview of agent playing
 
@@ -52,7 +53,8 @@ def main():
 
     #env = gym.make("Snake-16x16-big-apple-reward-v0") 
     #env = gym.make("Snake-16x16-v0")
-    env = gym.make("Snake-16x16-heatmap-v0")
+    #env = gym.make("Snake-16x16-heatmap-v0")
+    env = gym.make("Snake-16x16-heatmap-big-reward-v0")
 
     agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
@@ -101,6 +103,10 @@ def main():
 
             current_state = new_state
             step += 1
+
+#            if keyboard.is_pressed("p"):
+#                print(f"Pausing at episode {episode}")
+#                input("Press any key to continue learning")
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)

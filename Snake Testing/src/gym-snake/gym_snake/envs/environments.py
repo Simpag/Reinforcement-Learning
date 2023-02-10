@@ -35,6 +35,14 @@ class Snake_8x8(SnakeEnv):
     def __init__(self):
         super().__init__(grid_size=8)
 
+class Snake_8x8_Heatmap(SnakeEnv):
+    def __init__(self):
+        super().__init__(grid_type=GridType.heatmap ,grid_size=8, reward_apple=5)
+
+class Snake_8x8_Heatmap_big_reward(SnakeEnv):
+    def __init__(self):
+        super().__init__(grid_type=GridType.heatmap ,grid_size=8, reward_apple=20)
+
 class Snake_16x16(SnakeEnv):
     def __init__(self):
         super().__init__(grid_size=16)
@@ -45,7 +53,11 @@ class Snake_16x16_Big_Apple_Reward(SnakeEnv):
 
 class Snake_16x16_Heatmap(SnakeEnv):
     def __init__(self):
-        super().__init__(grid_size=16, reward_apple=5)
+        super().__init__(grid_type=GridType.heatmap ,grid_size=16, reward_apple=5)
+
+class Snake_16x16_Heatmap_big_reward(SnakeEnv):
+    def __init__(self):
+        super().__init__(grid_type=GridType.heatmap ,grid_size=16, reward_apple=20)
 
 class Snake_Hex_4x4(SnakeEnv):
     def __init__(self):

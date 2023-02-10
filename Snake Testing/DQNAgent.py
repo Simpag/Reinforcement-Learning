@@ -44,7 +44,7 @@ class DQNAgent():
 
         self._clear_memory_at = 20
         self._clear_memory_counter = 1
-
+    """
     def create_model(self, env: gym.Env):
         model = Sequential()
 
@@ -60,6 +60,26 @@ class DQNAgent():
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         model.add(Dense(64))
+
+        model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
+        model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
+        return model"""
+
+    def create_model(self, env: gym.Env):
+        model = Sequential()
+
+        model.add(Conv2D(128, (3, 3), input_shape=env.observation_space.shape))  # env.observation_space a nxn RGB image.
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.2))
+
+        model.add(Conv2D(128, (3, 3)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.2))
+
+        model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
+        model.add(Dense(32))
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])

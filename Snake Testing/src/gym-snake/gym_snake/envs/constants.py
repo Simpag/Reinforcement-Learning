@@ -17,6 +17,7 @@ class GridType(IntEnum):
     """ Style of grid to use for environment """
     square = 0
     hex = 1
+    heatmap = 2
 
 
 class Action4(IntEnum):

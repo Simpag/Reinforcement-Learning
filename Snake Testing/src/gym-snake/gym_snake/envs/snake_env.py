@@ -3,7 +3,7 @@ from gym import spaces
 from gym.utils import seeding
 
 from gym_snake.envs.constants import Action4, Action6, GridType
-from gym_snake.envs.grid import SquareGrid, HexGrid
+from gym_snake.envs.grid import SquareGrid, HexGrid, SquareGridHeatmap
 
 CELL_PIXELS = 32
 
@@ -58,7 +58,7 @@ class SnakeEnv(gym.Env):
         self.action_space = []
         self.observation_space = []
 
-        action_class = Action4 if grid_type == GridType.square else Action6
+        action_class = Action6 if grid_type == GridType.hex else Action4
 
         for _ in range(num_snakes):
             self.action_space.append(spaces.Discrete(len(action_class)))
@@ -134,6 +134,20 @@ class SnakeEnv(gym.Env):
             )
         elif self.grid_type == GridType.hex:
             self.grid = HexGrid(
+                np_random=self.np_random,
+                width=self.width,
+                height=self.height,
+                num_snakes=self.num_snakes,
+                num_apples=self.num_apples,
+                initial_snake_size=self.initial_snake_size,
+                reward_apple=self.reward_apple,
+                reward_none=self.reward_none,
+                reward_collision=self.reward_collision,
+                done_apple=self.done_apple,
+                always_expand=self.always_expand
+            )
+        elif self.grid_type == GridType.heatmap:
+            self.grid = SquareGridHeatmap(
                 np_random=self.np_random,
                 width=self.width,
                 height=self.height,

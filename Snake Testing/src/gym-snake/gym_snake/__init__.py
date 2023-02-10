@@ -66,6 +66,18 @@ register(
     entry_point='gym_snake.envs:Snake_16x16_Heatmap'
 )
 register(
+    id='Snake-16x16-heatmap-big-reward-v0',
+    entry_point='gym_snake.envs:Snake_16x16_Heatmap_big_reward'
+)
+register(
+    id='Snake-8x8-heatmap-v0',
+    entry_point='gym_snake.envs:Snake_8x8_Heatmap'
+)
+register(
+    id='Snake-8x8-heatmap-big-reward-v0',
+    entry_point='gym_snake.envs:Snake_8x8_Heatmap_big_reward'
+)
+register(
     id='Snake-Hex-16x16-v0',
     entry_point='gym_snake.envs:Snake_Hex_16x16'
 )

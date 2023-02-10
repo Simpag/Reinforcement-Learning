@@ -9,6 +9,8 @@ def start_test(file_name, env_name):
     from alive_progress import alive_bar
     import random
     import tensorflow as tf
+    import keyboard
+    import time
 
     # For more repetitive results
     ENV_SEED = 1
@@ -25,6 +27,7 @@ def start_test(file_name, env_name):
     # Define the testing function
     def test(model, episodes):
         total_reward = 0
+        episodes_skipped = 0
         with alive_bar(episodes) as bar:
             for episode in range(episodes):
                 state = env.reset()
@@ -36,11 +39,18 @@ def start_test(file_name, env_name):
                     state = next_state
                     episode_reward += reward
                     env.render()
+                    if keyboard.is_pressed("q"):
+                        print(f"Skipping episode {episode}")
+                        done = True
+                        episodes_skipped += 1
+                        episode_reward = 0
+                        time.sleep(0.5) # So we dont skip mulitple episodes
+
                 total_reward += episode_reward
                 bar()
 
         env.close()
-        return total_reward / episodes
+        return total_reward / (episodes - episodes_skipped)
 
     # Test the trained model
     average_reward = test(model, 100)

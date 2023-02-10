@@ -1,0 +1,4 @@
+Rewrite some stuff for the new openai gymnasium library.
+Import mario env.
+Learn more about different layers.
+Clean up the DDQNAgen code and training code to make it more readable.

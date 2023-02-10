@@ -2,10 +2,10 @@ from gym_snake.envs.constants import Action4, Direction4
 from gym_snake.envs.grid.base_grid import BaseGrid
 
 
-class SquareGrid(BaseGrid):
+class SquareGridHeatmap(BaseGrid):
 
     def __init__(self, *args, **kwargs):
-        super(SquareGrid, self).__init__(*args, **kwargs)
+        super(SquareGridHeatmap, self).__init__(*args, **kwargs)
 
     def move(self, actions):
         assert not self.all_done
@@ -50,7 +50,7 @@ class SquareGrid(BaseGrid):
 
         return rewards, dones
 
-    def _get_apple_closeness(self, distance):
+    def _get_apple_closeness(self):
         # Returns a reward if the snake head is within 1, 2, 3 moves
         # Only works for one apple and one snake
         # Max distance is 512
@@ -60,9 +60,9 @@ class SquareGrid(BaseGrid):
         d = (head[0] - apple[0])**2 + (head[1] - apple[1])**2 # Square distance to skip on square root calculation
         
         if d == 1: # one move away
-            return max(self.reward_apple//2, 0)
+            return 3
         elif d < 5: # 2 moves away
-            return max(self.reward_apple//4, 0)
+            return 2
         elif d < 10: # 3 moves away
             return 1
 
@@ -113,11 +113,11 @@ class SquareGrid(BaseGrid):
             r.drawLine(x, 0, x, height_px)
 
         # Render the objects
-        snake_cell_renderer = SquareGrid._square_cell_renderer(r, cell_pixels)
+        snake_cell_renderer = SquareGridHeatmap._square_cell_renderer(r, cell_pixels)
         for snake in self.snakes:
             snake.render(snake_cell_renderer)
 
-        apple_cell_renderer = SquareGrid._circle_cell_renderer(r, cell_pixels)
+        apple_cell_renderer = SquareGridHeatmap._circle_cell_renderer(r, cell_pixels)
         self.apples.render(apple_cell_renderer)
 
         r.pop()
