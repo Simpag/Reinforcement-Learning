@@ -55,6 +55,23 @@ class SquareGridHeatmap(BaseGrid):
         # Only works for one apple and one snake
         # Max distance is 512
         head = self.snakes[0].get_head_pos() # (x, y)
+        apples = self.apples.get_positions() # (x, y)
+        reward = 0
+
+        for apple in apples:
+            d = (head[0] - apple[0])**2 + (head[1] - apple[1])**2 # Square distance to skip on square root calculation
+        
+            if d == 1: # one move away
+                reward += 3
+            elif d < 5: # 2 moves away
+                reward += 2
+            elif d < 10: # 3 moves away
+                reward += 1
+
+        return reward
+
+        """
+        head = self.snakes[0].get_head_pos() # (x, y)
         apple = self.apples.get_pos()        # (x, y)
 
         d = (head[0] - apple[0])**2 + (head[1] - apple[1])**2 # Square distance to skip on square root calculation
@@ -67,6 +84,7 @@ class SquareGridHeatmap(BaseGrid):
             return 1
 
         return 0
+        """
 
 
     def get_forward_action(self):

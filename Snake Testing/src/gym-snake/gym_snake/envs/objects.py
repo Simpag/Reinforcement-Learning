@@ -94,6 +94,9 @@ class Apples:
         self._set.add(e)
         return e
 
+    def get_positions(self):
+        return self._set
+
     def render(self, cell_renderer):
         for p in self._set:
             cell_renderer(p, self._color)

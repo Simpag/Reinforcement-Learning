@@ -79,9 +79,9 @@ class DQNAgent():
         model.add(Dropout(0.2))
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-        model.add(Dense(32))
+        model.add(Dense(128))
 
-        model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
+        model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
         return model
 

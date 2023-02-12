@@ -70,6 +70,10 @@ register(
     entry_point='gym_snake.envs:Snake_16x16_Heatmap_big_reward'
 )
 register(
+    id='Snake-16x16-heatmap-big-reward-5-apples-v0',
+    entry_point='gym_snake.envs:Snake_16x16_Heatmap_big_reward_5_apples'
+)
+register(
     id='Snake-8x8-heatmap-v0',
     entry_point='gym_snake.envs:Snake_8x8_Heatmap'
 )

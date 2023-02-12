@@ -18,18 +18,19 @@ def main():
     NEGATIVE_REWARD = 0                 # Negative reward to give
 
     # Model settings
-    MODEL_NAME = "16x16_heatmap_big_reward_smalln"
-    MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
+    MODEL_NAME = "16x16_4_apples"
+    MODEL_TO_LOAD = "models/16x16_4_apples_episode_5000_0.28653165943647374epsilon_1676140821.model"                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
 
     # Training settings
+    STARTING_EPISODE = 5001                # Which episode to start from (should be 1 unless continued training on a model)
     EPISODES = 20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 20                     # Save model that reaches min avg reward
+    MIN_REWARD = 50                     # Save model that reaches min avg reward
     AGGREGATE_STATS_EVERY = 50          # When to record data to plot how it performs
     SHOW_PREVIEW = False                # Show preview of agent playing
 
@@ -38,7 +39,7 @@ def main():
     LEARNING_RATE = 0.001
 
     # Exploration settings
-    epsilon = 1                         # Not a constant, going to be decayed
+    epsilon = 0.28653165943647374                         # Not a constant, going to be decayed
     EPSILON_DECAY = 0.99975 #0.95
     MIN_EPSILON = 0.001
 
@@ -49,16 +50,18 @@ def main():
     tf.random.set_seed(ENV_SEED)
 
     # For stats
-    ep_rewards = [0] 
+    ep_rewards = [-1,] 
 
     #env = gym.make("Snake-16x16-big-apple-reward-v0") 
     #env = gym.make("Snake-16x16-v0")
     #env = gym.make("Snake-16x16-heatmap-v0")
-    env = gym.make("Snake-16x16-heatmap-big-reward-v0")
+    #env = gym.make("Snake-16x16-heatmap-big-reward-v0")
+    #env = gym.make("Snake-16x16-heatmap-big-reward-5-apples-v0")
+    env = gym.make("Snake-16x16-4a-v0")
 
     agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
-    for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
+    for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes'):
         # Update tensorboard step every episode
         agent.tensorboard.step = episode
 
