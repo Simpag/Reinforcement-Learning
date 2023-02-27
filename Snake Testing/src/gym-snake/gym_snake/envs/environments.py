@@ -89,6 +89,10 @@ class Snake_16x16_4a(SnakeEnv):
     def __init__(self):
         super().__init__(grid_size=16, num_apples=4)
 
+class Snake_16x16_8a(SnakeEnv):
+    def __init__(self):
+        super().__init__(grid_size=16, num_apples=8)
+
 class Snake_Hex_4x4_4a(SnakeEnv):
     def __init__(self):
         super().__init__(grid_type=GridType.hex, grid_size=4, initial_snake_size=2, num_apples=4)

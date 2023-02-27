@@ -13,19 +13,15 @@ import gym_snake
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
 def main():
-    # Custom env settings
-    GIVE_NEGATIVE_REWARD_AFTER = 1000   # How many steps before giving the model a negative reward, resets if the reward from step is positive
-    NEGATIVE_REWARD = 0                 # Negative reward to give
-
     # Model settings
-    MODEL_NAME = "16x16_4_apples"
-    MODEL_TO_LOAD = "models/16x16_4_apples_episode_5000_0.28653165943647374epsilon_1676140821.model"                # Load model from file, (None = wont load)
+    MODEL_NAME = "16x16_8a_normaln"
+    MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
 
     # Training settings
-    STARTING_EPISODE = 5001                # Which episode to start from (should be 1 unless continued training on a model)
+    STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
     EPISODES = 20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
@@ -39,8 +35,8 @@ def main():
     LEARNING_RATE = 0.001
 
     # Exploration settings
-    epsilon = 0.28653165943647374                         # Not a constant, going to be decayed
-    EPSILON_DECAY = 0.99975 #0.95
+    epsilon = 1                         # Not a constant, going to be decayed
+    EPSILON_DECAY = 0.9999 #0.99975 #0.95
     MIN_EPSILON = 0.001
 
     # For more repetitive results
@@ -57,7 +53,8 @@ def main():
     #env = gym.make("Snake-16x16-heatmap-v0")
     #env = gym.make("Snake-16x16-heatmap-big-reward-v0")
     #env = gym.make("Snake-16x16-heatmap-big-reward-5-apples-v0")
-    env = gym.make("Snake-16x16-4a-v0")
+    #env = gym.make("Snake-16x16-4a-v0")
+    env = gym.make("Snake-16x16-8a-v0")
 
     agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
@@ -85,15 +82,6 @@ def main():
 
             new_state, reward, done, truncated = env.step(action)
 
-            if reward < 1:
-                steps_without_reward += 1
-            else:
-                steps_without_reward = 0
-
-            if GIVE_NEGATIVE_REWARD_AFTER < steps_without_reward:
-                steps_without_reward = 0
-                reward -= NEGATIVE_REWARD
-
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
 
@@ -107,9 +95,6 @@ def main():
             current_state = new_state
             step += 1
 
-#            if keyboard.is_pressed("p"):
-#                print(f"Pausing at episode {episode}")
-#                input("Press any key to continue learning")
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)

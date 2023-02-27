@@ -130,6 +130,10 @@ register(
     entry_point='gym_snake.envs:Snake_16x16_4a'
 )
 register(
+    id='Snake-16x16-8a-v0',
+    entry_point='gym_snake.envs:Snake_16x16_8a'
+)
+register(
     id='Snake-Hex-16x16-4a-v0',
     entry_point='gym_snake.envs:Snake_Hex_16x16_4a'
 )

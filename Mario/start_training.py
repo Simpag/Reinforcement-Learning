@@ -1,31 +1,29 @@
 import random
 import time
-from DDQN import DDQNAgent
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
+from DDQN import DDQNAgent
+
 
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
 def main():
-    # Custom env settings
-    GIVE_NEGATIVE_REWARD_AFTER = 100    # How many steps before giving the model a negative reward, resets if the reward from step is positive
-    NEGATIVE_REWARD = 5                 # Negative reward to give
-
     # Model settings
+    MODEL_NAME = "16x16_8a_normaln"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
-    MODEL_NAME = "16x16_heatmap"
 
     # Training settings
+    STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
     EPISODES = 20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 0                      # Save model that reaches min reward
+    MIN_REWARD = 50                     # Save model that reaches min avg reward
     AGGREGATE_STATS_EVERY = 50          # When to record data to plot how it performs
     SHOW_PREVIEW = False                # Show preview of agent playing
 
@@ -35,7 +33,7 @@ def main():
 
     # Exploration settings
     epsilon = 1                         # Not a constant, going to be decayed
-    EPSILON_DECAY = 0.99975 #0.95
+    EPSILON_DECAY = 0.9999 #0.99975 #0.95
     MIN_EPSILON = 0.001
 
     # For more repetitive results
@@ -45,20 +43,17 @@ def main():
     tf.random.set_seed(ENV_SEED)
 
     # For stats
-    ep_rewards = [0] 
+    ep_rewards = [-1,] 
 
-    #env = gym.make("Snake-16x16-big-apple-reward-v0") 
-    #env = gym.make("Snake-16x16-v0")
-    env = gym.make("Snake-16x16-heatmap-v0")
+    env = gym.make("Snake-16x16-big-apple-reward-v0") 
 
     agent = DDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
-    for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
+    for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes'):
         # Update tensorboard step every episode
         agent.tensorboard.step = episode
 
         # Restarting episode - reset episode reward and step number
-        steps_without_reward = 0
         episode_reward = 0
         step = 1
 
@@ -77,15 +72,6 @@ def main():
 
             new_state, reward, done, truncated = env.step(action)
 
-            if reward < 1:
-                steps_without_reward += 1
-            else:
-                steps_without_reward = 0
-
-            if GIVE_NEGATIVE_REWARD_AFTER < steps_without_reward:
-                steps_without_reward = 0
-                reward -= NEGATIVE_REWARD
-
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
 
@@ -98,6 +84,7 @@ def main():
 
             current_state = new_state
             step += 1
+
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)
