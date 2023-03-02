@@ -11,6 +11,7 @@ def start_test(file_name, env_name):
     import tensorflow as tf
     import keyboard
     import time
+    from sys import platform
 
     # For more repetitive results
     ENV_SEED = 1
@@ -39,12 +40,14 @@ def start_test(file_name, env_name):
                     state = next_state
                     episode_reward += reward
                     env.render()
-                    if keyboard.is_pressed("q"):
-                        print(f"Skipping episode {episode}")
-                        done = True
-                        episodes_skipped += 1
-                        episode_reward = 0
-                        time.sleep(0.5) # So we dont skip mulitple episodes
+
+                    if platform == "win32":
+                        if keyboard.is_pressed("q"):
+                            print(f"Skipping episode {episode}")
+                            done = True
+                            episodes_skipped += 1
+                            episode_reward = 0
+                            time.sleep(0.5) # So we dont skip mulitple episodes
 
                 total_reward += episode_reward
                 bar()

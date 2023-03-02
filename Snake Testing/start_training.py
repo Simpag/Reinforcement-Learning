@@ -4,7 +4,8 @@ from DQNAgent import DQNAgent
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
-import keyboard
+import os
+from multiprocessing import Pool
 
 import gym
 import gym_snake
@@ -12,18 +13,18 @@ import gym_snake
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
-def main():
+def main(lr, ed, bs, tu):
     # Model settings
-    MODEL_NAME = "16x16_8a_normaln"
+    MODEL_NAME = f"16x16_8a_bs{bs}_lr{lr}_ed{ed}_tu{tu}"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
-    TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
+    TARGET_MODEL_UPDATE_CYCLE = tu #10      # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 20_000                   # Total training episodes
-    MINIBATCH_SIZE = 32                 # How many steps to use for training
+    EPISODES = 10_000                   # Total training episodes
+    MINIBATCH_SIZE = bs#32              # How many steps to use for training
 
     #  Stats settings
     MIN_REWARD = 50                     # Save model that reaches min avg reward
@@ -32,11 +33,11 @@ def main():
 
     # DQ-settings
     DISCOUNT = 0.99                     # gamma (discount factor)
-    LEARNING_RATE = 0.001
+    LEARNING_RATE = lr #0.001
 
     # Exploration settings
-    epsilon = 1                         # Not a constant, going to be decayed
-    EPSILON_DECAY = 0.9999 #0.99975 #0.95
+    epsilon = 1                         
+    EPSILON_DECAY = ed #0.9999 #0.99975 #0.95
     MIN_EPSILON = 0.001
 
     # For more repetitive results
@@ -117,5 +118,64 @@ def main():
             epsilon *= EPSILON_DECAY
             epsilon = max(MIN_EPSILON, epsilon)
 
+    return 0
+
+def flr(lr):
+    main(lr=lr, ed=0.9995, bs=32, tu=10)
+
+def fed(ed):
+    main(lr=0.001, ed=ed, bs=32, tu=10)
+
+def fbs(batch_size):
+    main(lr=0.001, ed=0.9995, bs=batch_size, tu=10)
+
+def ftu(target_update):
+    main(lr=0.001, ed=0.9995, bs=32, tu=target_update)
+
+def f(i):
+    if i < len(learning_rates):
+        flr(learning_rates[i])
+        return
+    else:
+        i -= len(learning_rates)
+
+    if i < len(epsilon_decays):
+        fed(epsilon_decays[i])
+        return
+    else:
+        i -= len(epsilon_decays)
+
+    if i < len(batch_sizes):
+        fbs(batch_sizes[i])
+        return
+    else:
+        i -= len(batch_sizes)
+
+    if i < len(target_updates):
+        ftu(target_updates[i])
+        return
+    else:
+        i -= len(target_updates)
+
 if __name__ == "__main__":
-    main()
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)
+
+    learning_rates = np.geomspace(0.0001, 0.1, 10)
+    epsilon_decays = [0.8, 0.9, 0.95, 0.97, 0.98, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
+    batch_sizes = [1, 4, 8, 16, 32, 64, 128, 256, 512]
+    target_updates = [5, 10, 25, 50, 75, 100, 250, 500, 1000] # number of TERMINAL states before update
+
+    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)
+
+    with Pool(18) as p:
+        p.map(f, list(range(total_length)))
+    
+    #for bs in batch_sizes:
+    #    print(f"Current ed: {ed}")
+    #    main(lr=lr, ed=ed, bs=bs)

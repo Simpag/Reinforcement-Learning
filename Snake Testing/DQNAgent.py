@@ -63,7 +63,7 @@ class DQNAgent():
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
-        return model"""
+        return model
 
     def create_model(self, env: gym.Env):
         model = Sequential()
@@ -83,7 +83,24 @@ class DQNAgent():
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
-        return model
+        return model"""
+
+    def create_model(self, env: gym.Env):
+        model = Sequential()
+
+        model.add(Conv2D(32, kernel_size=8, strides=4, input_shape=env.observation_space.shape, activation='relu'))  # env.observation_space a nxn RGB image.
+
+        model.add(Conv2D(64, kernel_size=4, strides=2, activation='relu', padding='same'))
+
+        model.add(Conv2D(64, kernel_size=3, strides=1, activation='relu', padding='same'))
+
+        model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
+        
+        model.add(Dense(512, activation='relu'))
+
+        model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
+        model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
+        return model # maybe try softmax activation at the last connected layer
 
     # Adds step's data to a memory replay array
     def update_replay_memory(self, transition: tuple):
