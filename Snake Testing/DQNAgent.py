@@ -14,7 +14,7 @@ from keras import backend as K
 import gc
 
 class DQNAgent():
-    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None) -> None:
+    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None) -> None:
         # DQ variables
         self.DISCOUNT = DISCOUNT
         self._lr = LEARNING_RATE
@@ -25,7 +25,10 @@ class DQNAgent():
         self.MINIBATCH_SIZE = MINIBATCH_SIZE
 
         # Custom tensorboard object
-        self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
+        if LOG_DIR is None:
+            self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
+        else:
+            self.tensorboard = ModifiedTensorBoard(log_dir=LOG_DIR)
 
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
@@ -42,7 +45,7 @@ class DQNAgent():
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
 
-        self._clear_memory_at = 20
+        self._clear_memory_at = 1
         self._clear_memory_counter = 1
     """
     def create_model(self, env: gym.Env):
@@ -96,7 +99,7 @@ class DQNAgent():
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(128, activation='relu'))
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
@@ -175,6 +178,8 @@ class DQNAgent():
             os.makedirs('models')
         save_model(self.model, 'models/' + filename)
         print(f"saved model at: {'models/' + filename}")
+        gc.collect()
+        K.clear_session()
 
     def load(self, filename):
         print(f"Loaded model: {filename}")

@@ -1,21 +1,29 @@
 import random
 import time
-from DQNAgent import DQNAgent
 from tqdm import tqdm
 import numpy as np
-import tensorflow as tf
 import os
+import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 from multiprocessing import Pool
 
+from keras import backend as K
+import gc
+
 import gym
+from gym import logger
+logger.set_level(logger.ERROR)
 import gym_snake
+
 
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
-def main(lr, ed, bs, tu):
+def main(folder, lr, ed, bs, tu, it, tqdm_name):
+    from DQNAgent import DQNAgent
+
     # Model settings
-    MODEL_NAME = f"16x16_8a_bs{bs}_lr{lr}_ed{ed}_tu{tu}"
+    MODEL_NAME = f"{folder}/16x16_8a_bs{bs}_lr{lr}_ed{ed}_tu{tu}"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = tu #10      # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
@@ -23,7 +31,7 @@ def main(lr, ed, bs, tu):
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 10_000                   # Total training episodes
+    EPISODES = 15_000                   # Total training episodes
     MINIBATCH_SIZE = bs#32              # How many steps to use for training
 
     #  Stats settings
@@ -59,7 +67,7 @@ def main(lr, ed, bs, tu):
 
     agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
-    for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes'):
+    for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes', position=it, desc=tqdm_name):
         # Update tensorboard step every episode
         agent.tensorboard.step = episode
 
@@ -120,60 +128,98 @@ def main(lr, ed, bs, tu):
 
     return 0
 
-def flr(lr):
-    main(lr=lr, ed=0.9995, bs=32, tu=10)
+def flr(lr, it):
+    if not os.path.isdir(f'models/learning_rate_test{version}/8a_lr{lr}'):
+        os.makedirs(f'models/learning_rate_test{version}/8a_lr{lr}')
+    main(folder=f"learning_rate_test{version}/8a_lr{lr}", lr=lr, ed=0.9995, bs=32, tu=10, it=it, tqdm_name=f'lr_{lr}')
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
 
-def fed(ed):
-    main(lr=0.001, ed=ed, bs=32, tu=10)
+def fed(ed, it):
+    if not os.path.isdir(f'models/epsilon_decay_test{version}/8a_ed{ed}'):
+        os.makedirs(f'models/epsilon_decay_test{version}/8a_ed{ed}')
+    main(folder=f"epsilon_decay_test{version}/8a_ed{ed}", lr=0.001, ed=ed, bs=32, tu=10, it=it, tqdm_name=f'ed_{ed}')
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
 
-def fbs(batch_size):
-    main(lr=0.001, ed=0.9995, bs=batch_size, tu=10)
+def fbs(batch_size, it):
+    if not os.path.isdir(f'models/batch_size_test{version}/8a_bs{batch_size}'):
+        os.makedirs(f'models/batch_size_test{version}/8a_bs{batch_size}')
+    main(folder=f"batch_size_test{version}/8a_bs{batch_size}", lr=0.001, ed=0.9995, bs=batch_size, tu=10, it=it, tqdm_name=f'bs_{batch_size}')
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
 
-def ftu(target_update):
-    main(lr=0.001, ed=0.9995, bs=32, tu=target_update)
+def ftu(target_update, it):
+    if not os.path.isdir(f'models/target_update_test{version}/8a_tu{target_update}'):
+        os.makedirs(f'models/target_update_test{version}/8a_tu{target_update}')
+    main(folder=f"target_update_test{version}/8a_tu{target_update}", lr=0.001, ed=0.9995, bs=32, tu=target_update, it=it, tqdm_name=f'tu_{target_update}')
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
+
 
 def f(i):
+    """if i % 24 < 4:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+            except RuntimeError as e:
+                print(e)
+        devices = tf.config.list_physical_devices('GPU')
+        tf.config.set_visible_devices(devices, 'GPU')
+    else:
+        tf.config.set_visible_devices([], 'GPU') # only run 4 on gpu
+    """
+    if i >= 4:
+        tf.config.set_visible_devices([], 'GPU') # only run 4 on gpu
+    else:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+            except RuntimeError as e:
+                print(e)
+
     if i < len(learning_rates):
-        flr(learning_rates[i])
+        flr(learning_rates[i], it=i)
         return
     else:
         i -= len(learning_rates)
 
     if i < len(epsilon_decays):
-        fed(epsilon_decays[i])
+        fed(epsilon_decays[i], it=i+len(learning_rates))
         return
     else:
         i -= len(epsilon_decays)
 
     if i < len(batch_sizes):
-        fbs(batch_sizes[i])
+        fbs(batch_sizes[i], it=i+len(learning_rates)+len(epsilon_decays))
         return
     else:
         i -= len(batch_sizes)
 
     if i < len(target_updates):
-        ftu(target_updates[i])
+        ftu(target_updates[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes))
         return
     else:
         i -= len(target_updates)
 
+version = 5
 if __name__ == "__main__":
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-        except RuntimeError as e:
-            print(e)
-
-    learning_rates = np.geomspace(0.0001, 0.1, 10)
-    epsilon_decays = [0.8, 0.9, 0.95, 0.97, 0.98, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
-    batch_sizes = [1, 4, 8, 16, 32, 64, 128, 256, 512]
-    target_updates = [5, 10, 25, 50, 75, 100, 250, 500, 1000] # number of TERMINAL states before update
+    # TODO try CER with batch_sizes....
+    # combine test 3 and 4, 3rd test crashed sadly
+    learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
+    epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
+    batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+    target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
 
     total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)
 
-    with Pool(18) as p:
+    #tf.config.set_visible_devices([], 'GPU')
+
+    with Pool(24) as p:
         p.map(f, list(range(total_length)))
     
     #for bs in batch_sizes:
