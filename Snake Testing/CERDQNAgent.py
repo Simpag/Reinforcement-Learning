@@ -71,11 +71,14 @@ class DQNAgent():
     # Add the newest transition to the replay memory
     def _update_replay_memory(self):
         self.replay_memory.append(self.newest_transition)
+        self.newest_transition = None
 
 
     def train(self, terminal_state, step):
         # Start training only if certain number of samples is already saved
         if len(self.replay_memory) < self.MIN_REPLAY_MEMORY_SIZE:
+            if self.newest_transition is not None:
+                self._update_replay_memory()
             return
             
         # Get a minibatch of random samples from memory replay table

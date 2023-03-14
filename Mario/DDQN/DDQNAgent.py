@@ -5,7 +5,7 @@ from collections import deque
 import time
 import numpy as np
 
-from DDQN import ModifiedTensorBoard
+from DDQN.ModifiedTensorBoard import ModifiedTensorBoard
 
 from keras.models import Sequential, save_model, load_model
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout, Activation
@@ -42,7 +42,7 @@ class DDQNAgent():
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
 
-        self._clear_memory_at = 20
+        self._clear_memory_at = 2
         self._clear_memory_counter = 1
 
     def create_model(self, env: gym.Env):

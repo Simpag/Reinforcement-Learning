@@ -3,15 +3,19 @@ import time
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
-from DDQN import DDQNAgent
+from DDQN.CERDDQNAgent import CERDDQNAgent
 
+# Mario stuff
+from nes_py.wrappers import JoypadSpace
+import gym_super_mario_bros
+from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
 def main():
     # Model settings
-    MODEL_NAME = "16x16_8a_normaln"
+    MODEL_NAME = "Testing"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
@@ -19,11 +23,11 @@ def main():
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 20_000                   # Total training episodes
+    EPISODES = 1#20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
-    MIN_REWARD = 50                     # Save model that reaches min avg reward
+    MIN_REWARD = 10**1000               # Save model that reaches min avg reward
     AGGREGATE_STATS_EVERY = 50          # When to record data to plot how it performs
     SHOW_PREVIEW = False                # Show preview of agent playing
 
@@ -45,9 +49,11 @@ def main():
     # For stats
     ep_rewards = [-1,] 
 
-    env = gym.make("Snake-16x16-big-apple-reward-v0") 
+    env = gym_super_mario_bros.make('SuperMarioBros-v0')
+    env = JoypadSpace(env, COMPLEX_MOVEMENT) 
 
-    agent = DDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
+    # ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None
+    agent = CERDDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
 
     for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes'):
         # Update tensorboard step every episode
@@ -70,7 +76,7 @@ def main():
                 # Get random action
                 action = np.random.randint(0, env.action_space.n)
 
-            new_state, reward, done, truncated = env.step(action)
+            new_state, reward, done, info = env.step(action)
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -108,4 +114,15 @@ def main():
             epsilon = max(MIN_EPSILON, epsilon)
 
 if __name__ == "__main__":
-    main()
+    if False:
+        import cProfile
+        import pstats
+
+        profiler = cProfile.Profile()
+        #profiler.enable()
+        main(profiler=profiler)
+        profiler.disable()
+        stats = pstats.Stats(profiler)
+        stats.dump_stats('profiles/p.dat')
+    else:
+        main()

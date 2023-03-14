@@ -19,14 +19,14 @@ import gym_snake
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
-def main(folder, lr, ed, bs, tu, it, tqdm_name):
+def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
     from DQNAgent import DQNAgent
 
     # Model settings
     MODEL_NAME = f"{folder}/16x16_8a_bs{bs}_lr{lr}_ed{ed}_tu{tu}"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
     TARGET_MODEL_UPDATE_CYCLE = tu #10      # Number of terminal states before updating target model
-    REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
+    REPLAY_MEMORY_SIZE = rm #25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
 
     # Training settings
@@ -156,6 +156,12 @@ def ftu(target_update, it):
     gc.collect()        # without this I get mad memory leak
     K.clear_session()   # without this I get mad memory leak
 
+def frm(replay_memory, it):
+    if not os.path.isdir(f'models/replay_memory_test{version}/8a_rm{replay_memory}'):
+        os.makedirs(f'models/replay_memory_test{version}/8a_rm{replay_memory}')
+    main(folder=f"replay_memory_test{version}/8a_rm{replay_memory}", lr=0.001, ed=0.9995, bs=32, tu=10, it=it, tqdm_name=f'rm_{replay_memory}', rm=replay_memory)
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
 
 def f(i):
     """if i % 24 < 4:
@@ -206,7 +212,23 @@ def f(i):
     else:
         i -= len(target_updates)
 
-version = 5
+
+def f2(i):
+    if i >= 4:
+        tf.config.set_visible_devices([], 'GPU') # only run 4 on gpu
+    else:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+            except RuntimeError as e:
+                print(e)
+
+    frm(replay_memories[i], it=i)
+
+
+version = 7
 if __name__ == "__main__":
     # TODO try CER with batch_sizes....
     # combine test 3 and 4, 3rd test crashed sadly
@@ -214,14 +236,19 @@ if __name__ == "__main__":
     epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
     batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
     target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
+    replay_memories = [32, 64, 128, 512, 1000, 2500, 5000, 7500, 10_000, 12_500, 15_000, 20_000, 25_000, 50_000]
+
 
     total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)
 
     #tf.config.set_visible_devices([], 'GPU')
 
-    with Pool(24) as p:
-        p.map(f, list(range(total_length)))
+    #with Pool(24) as p:
+    #    p.map(f, list(range(total_length)))
     
-    #for bs in batch_sizes:
-    #    print(f"Current ed: {ed}")
-    #    main(lr=lr, ed=ed, bs=bs)
+    l = list(range(len(replay_memories)))
+    l.reverse()
+    with Pool(24) as p:
+        p.map(f2, l)
+    
+    
