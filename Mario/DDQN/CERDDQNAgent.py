@@ -57,7 +57,7 @@ class CERDDQNAgent():
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(512, activation='relu'))
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
@@ -126,7 +126,6 @@ class CERDDQNAgent():
         # Update target network counter every episode
         if terminal_state:
             self.target_update_counter += 1
-            self._clear_memory_counter += 1
 
         # If counter reaches set value, update target network with weights of main network
         if self.target_update_counter > self.target_model_update_cycle:

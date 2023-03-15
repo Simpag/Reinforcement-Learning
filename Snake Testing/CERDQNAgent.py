@@ -13,7 +13,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 import gc
 
-class DQNAgent():
+class CERDQNAgent():
     def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None) -> None:
         # DQ variables
         self.DISCOUNT = DISCOUNT
@@ -126,7 +126,6 @@ class DQNAgent():
         # Update target network counter every episode
         if terminal_state:
             self.target_update_counter += 1
-            self._clear_memory_counter += 1
 
         # If counter reaches set value, update target network with weights of main network
         if self.target_update_counter > self.target_model_update_cycle:

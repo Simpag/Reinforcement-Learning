@@ -13,6 +13,8 @@ def start_test(file_name, env_name):
     import time
     from sys import platform
 
+    tf.config.set_visible_devices([], 'GPU')
+
     # For more repetitive results
     ENV_SEED = 1
     random.seed(ENV_SEED)

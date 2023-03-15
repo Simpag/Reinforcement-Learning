@@ -8,12 +8,16 @@ from DDQN.CERDDQNAgent import CERDDQNAgent
 # Mario stuff
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
-from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+
+# Env wrappers
+from EnvWrappers.wrappers import SkipFrame
+from gym.wrappers import FrameStack, GrayScaleObservation, ResizeObservation
 
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
-def main():
+def main(profiler = None):
     # Model settings
     MODEL_NAME = "Testing"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
@@ -50,7 +54,15 @@ def main():
     ep_rewards = [-1,] 
 
     env = gym_super_mario_bros.make('SuperMarioBros-v0')
-    env = JoypadSpace(env, COMPLEX_MOVEMENT) 
+    env = JoypadSpace(env, SIMPLE_MOVEMENT) 
+
+    # apply wrappers to the env (increase training speed)
+    env = SkipFrame(env=env, skip=4)            # Skip every 4 frames
+    env = GrayScaleObservation(env=env)         # Turn image into grayscale
+    env = ResizeObservation(env=env, shape=84)  # Resize 240x256 image to 84x84
+    env = FrameStack(env=env, num_stack=4)      # Stack 4 frames
+
+    print(f"Env obs: {env.observation_space.shape}")
 
     # ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None
     agent = CERDDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
@@ -78,6 +90,9 @@ def main():
 
             new_state, reward, done, info = env.step(action)
 
+            if info['flag_get']:
+                done = True
+
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
 
@@ -90,6 +105,10 @@ def main():
 
             current_state = new_state
             step += 1
+
+            if profiler is not None:
+                if len(agent.replay_memory) >= agent.MIN_REPLAY_MEMORY_SIZE:
+                    profiler.enable()
 
 
         # Append episode reward to a list and log stats (every given number of episodes)
@@ -114,7 +133,7 @@ def main():
             epsilon = max(MIN_EPSILON, epsilon)
 
 if __name__ == "__main__":
-    if False:
+    if False: # if you want to save a profiling log
         import cProfile
         import pstats
 
