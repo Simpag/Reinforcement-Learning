@@ -27,7 +27,7 @@ def main(profiler = None):
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 1#20_000                   # Total training episodes
+    EPISODES = 3#20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
@@ -57,12 +57,10 @@ def main(profiler = None):
     env = JoypadSpace(env, SIMPLE_MOVEMENT) 
 
     # apply wrappers to the env (increase training speed)
-    env = SkipFrame(env=env, skip=4)            # Skip every 4 frames
-    env = GrayScaleObservation(env=env)         # Turn image into grayscale
-    env = ResizeObservation(env=env, shape=84)  # Resize 240x256 image to 84x84
-    env = FrameStack(env=env, num_stack=4)      # Stack 4 frames
-
-    print(f"Env obs: {env.observation_space.shape}")
+    env = SkipFrame(env=env, skip=4)                    # Skip every 4 frames
+    env = GrayScaleObservation(env=env, keep_dim=True)  # Turn image into grayscale
+    env = ResizeObservation(env=env, shape=84)          # Resize 240x256 image to 84x84
+    env = FrameStack(env=env, num_stack=4)              # Stack 4 frames
 
     # ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None
     agent = CERDDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
@@ -81,6 +79,7 @@ def main(profiler = None):
         # Reset flag and start iterating until episode ends
         done = False
         while not done:
+            env.render()
             if np.random.random() > epsilon:
                 # Get action from DQN
                 action = np.argmax(agent.get_qs(current_state))
@@ -133,7 +132,9 @@ def main(profiler = None):
             epsilon = max(MIN_EPSILON, epsilon)
 
 if __name__ == "__main__":
-    if False: # if you want to save a profiling log
+    profile = False
+    
+    if profile: # if you want to save a profiling log
         import cProfile
         import pstats
 
@@ -143,5 +144,13 @@ if __name__ == "__main__":
         profiler.disable()
         stats = pstats.Stats(profiler)
         stats.dump_stats('profiles/p.dat')
+        # snakeviz profiles/p.dat
     else:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+            except RuntimeError as e:
+                print(e)
         main()

@@ -42,6 +42,8 @@ class CERDDQNAgent():
             self.model = self.load(MODEL_TO_LOAD)
             self.target_model = self.load(MODEL_TO_LOAD) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
 
+        self.target_model.trainable = False
+
         # Target network | Used for predicting so we dont "overfit", initially the network will fluctuate a lot
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
@@ -49,17 +51,22 @@ class CERDDQNAgent():
     def create_model(self, env: gym.Env):
         model = Sequential()
 
-        model.add(Conv2D(32, kernel_size=8, strides=4, input_shape=env.observation_space.shape, activation='relu'))  # env.observation_space a nxn RGB image.
+        model.add(Conv2D(32, kernel_size=8, strides=4, input_shape=env.observation_space.shape))  # env.observation_space a nxn RGB image.
+        model.add(Activation('relu'))
 
-        model.add(Conv2D(64, kernel_size=4, strides=2, activation='relu', padding='same'))
+        model.add(Conv2D(64, kernel_size=4, strides=2))
+        model.add(Activation('relu'))
 
-        model.add(Conv2D(64, kernel_size=3, strides=1, activation='relu', padding='same'))
+        model.add(Conv2D(64, kernel_size=3, strides=1))
+        model.add(Activation('relu'))
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(512))
+        model.add(Activation('relu'))
 
-        model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
+        model.add(Dense(env.action_space.n))  # ACTION_SPACE_SIZE = how many choices
+        model.add(Activation('linear'))
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
         return model # maybe try softmax activation at the last connected layer
 
@@ -91,12 +98,12 @@ class CERDDQNAgent():
 
         # Get current states from minibatch, then query NN model for Q values
         current_states = np.array([transition[0] for transition in minibatch])/255
-        current_qs_list = self.model.predict(current_states, verbose=0)
+        current_qs_list = self.model.predict(current_states, verbose=0, use_multiprocessing=True)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
         new_current_states = np.array([transition[3] for transition in minibatch])/255
-        future_qs_list = self.target_model.predict(new_current_states, verbose=0)
+        future_qs_list = self.target_model.predict(new_current_states, verbose=0, use_multiprocessing=True)
 
         X = [] # left side of network
         y = [] # right side of network
@@ -121,7 +128,7 @@ class CERDDQNAgent():
             y.append(current_qs)
 
         # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X)/255, np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
+        self.model.fit(np.array(X)/255, np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if terminal_state else None, use_multiprocessing=True)
 
         # Update target network counter every episode
         if terminal_state:
@@ -138,7 +145,7 @@ class CERDDQNAgent():
     # Queries main network for Q values given current observation space (environment state)
     def get_qs(self, state):
         # TODO understand this [0] stuff (probably because reshape(-1,...) is an unknown length)
-        return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0)[0]
+        return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0, use_multiprocessing=True)[0]
 
     def save(self, filename):
         # Create models folder
