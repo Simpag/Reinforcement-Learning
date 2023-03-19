@@ -9,8 +9,13 @@ from DDQN.ModifiedTensorBoard import ModifiedTensorBoard
 
 from keras.models import Sequential, save_model, load_model
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout, Activation
+from tensorflow import keras
 from keras.optimizers import Adam
+from keras.losses import Huber # basically smooth L1 loss
 from keras import backend as K
+
+import tensorflow as tf
+
 import gc
 
 
@@ -35,24 +40,37 @@ class CERDDQNAgent():
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
 
+        # Save number of actions
+        self.num_actions = ENV.action_space.n
+
+        # Save obs space shape
+        self.observation_space = ENV.observation_space.shape
+        print(self.observation_space)
+
         # Main model
         if MODEL_TO_LOAD is None:
-            self.model = self.create_model(ENV)
-            self.target_model = self.create_model(ENV) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
+            self.model = self.create_model()
+            self.target_model = self.create_model() # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
         else:
             self.model = self.load(MODEL_TO_LOAD)
             self.target_model = self.load(MODEL_TO_LOAD) # Want the model that we query for future Q values to be more stable than the model that we're actively fitting every single step
 
         self.target_model.trainable = False
 
+        # Optimizer
+        self.optimizer = Adam(learning_rate=self._lr)
+        
+        # Loss function
+        self.loss_function = Huber()
+
         # Target network | Used for predicting so we dont "overfit", initially the network will fluctuate a lot
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
     
-    def create_model(self, env: gym.Env):
+    def create_model(self):
         model = Sequential()
 
-        model.add(Conv2D(32, kernel_size=8, strides=4, input_shape=env.observation_space.shape))  # env.observation_space a nxn RGB image.
+        model.add(Conv2D(32, kernel_size=8, strides=4, input_shape=self.observation_space))  # env.observation_space a nxn RGB image.
         model.add(Activation('relu'))
 
         model.add(Conv2D(64, kernel_size=4, strides=2))
@@ -66,9 +84,9 @@ class CERDDQNAgent():
         model.add(Dense(512))
         model.add(Activation('relu'))
 
-        model.add(Dense(env.action_space.n))  # ACTION_SPACE_SIZE = how many choices
+        model.add(Dense(self.num_actions))  # ACTION_SPACE_SIZE = how many choices
         model.add(Activation('linear'))
-        model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
+        #model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
         return model # maybe try softmax activation at the last connected layer
 
     # Adds step's data to a memory replay array
@@ -98,39 +116,47 @@ class CERDDQNAgent():
             self._update_replay_memory()
 
         # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0] for transition in minibatch])/255
-        current_qs_list = self.model.predict(current_states, verbose=0, use_multiprocessing=True)
+        current_states = np.array([np.array(transition[0]) for transition in minibatch])/255
 
         # Get future states from minibatch, then query NN model for Q values
-        # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array([transition[3] for transition in minibatch])/255
-        future_qs_list = self.target_model.predict(new_current_states, verbose=0, use_multiprocessing=True)
+        new_current_states = np.array([np.array(transition[3]) for transition in minibatch])/255
+        future_qs_list = self.target_model(new_current_states, training=False)
+        #future_qs_list = self.target_model.predict(new_current_states)
 
-        X = [] # left side of network
-        y = [] # right side of network
+        # Get reward sample
+        rewards = [transition[2] for transition in minibatch]
 
-        # Now we need to enumerate our batches
-        for index, (current_state, action, reward, new_current_state, done) in enumerate(minibatch):
+        # Get action sample
+        actions = [transition[1] for transition in minibatch]
 
-            # If not a terminal state, get new q from future states, otherwise set it to 0
-            # almost like with Q Learning, but we use just part of equation here
-            if not done:
-                max_future_q = np.max(future_qs_list[index])
-                new_q = reward + self.DISCOUNT * max_future_q
-            else:
-                new_q = reward
+        # Get all the done transitions
+        dones = tf.convert_to_tensor([float(transition[4]) for transition in minibatch])
 
-            # Update Q value for given state
-            current_qs = current_qs_list[index]
-            current_qs[action] = new_q # why not use the (1 - learning rate) * old Q
+        # Q value = reward + discount factor * expected future reward
+        updated_q_values = rewards + self.DISCOUNT * tf.reduce_max(
+                future_qs_list, axis=1
+            )
+        
+        # If final frame set the last value to -1
+        updated_q_values = updated_q_values * (1 - dones) - dones
 
-            # And append to our training data
-            X.append(current_state)
-            y.append(current_qs)
+        # Create a mask so we only calculate loss on the updated Q-values
+        masks = tf.one_hot(actions, self.num_actions)
 
-        # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X)/255, np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if terminal_state else None, use_multiprocessing=True)
+        with tf.GradientTape() as tape:
+            # Train the model on the states and updated Q-values
+            current_qs_list = self.model(current_states)
 
+            # Apply the masks to the Q-values to get the Q-value for action taken
+            q_action = tf.reduce_sum(tf.multiply(current_qs_list, masks), axis=1)
+            # Calculate loss between new Q-value and old Q-value
+            loss = self.loss_function(updated_q_values, q_action)
+
+            # Backpropagation
+            grads = tape.gradient(loss, self.model.trainable_variables)
+            self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+    
         # Update target network counter every episode
         if terminal_state:
             self.target_update_counter += 1
@@ -140,13 +166,18 @@ class CERDDQNAgent():
             self.target_model.set_weights(self.model.get_weights())
             self.target_update_counter = 0
 
-        gc.collect()        # without this I get mad memory leak
-        K.clear_session()   # without this I get mad memory leak
+        #gc.collect()        # without this I get mad memory leak
+        #K.clear_session()   # without this I get mad memory leak
 
     # Queries main network for Q values given current observation space (environment state)
-    def get_qs(self, state):
+    def get_action(self, state):
         # TODO understand this [0] stuff (probably because reshape(-1,...) is an unknown length)
-        return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0, use_multiprocessing=True)[0]
+        #return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0, use_multiprocessing=True)[0]
+        #state = np.array(state).reshape(-1, *state.shape)/255
+        state_tensor = tf.convert_to_tensor(state)
+        state_tensor = tf.expand_dims(state_tensor, 0)
+        action_probs = self.model(state_tensor, training=False)
+        return tf.argmax(action_probs[0]).numpy()
 
     def save(self, filename):
         # Create models folder

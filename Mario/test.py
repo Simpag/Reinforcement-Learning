@@ -85,7 +85,7 @@ epsilon_greedy_frames = 1000000.0
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
 # Train the model after 4 actions
-update_after_actions = 4
+update_after_actions = 1
 # How often to update the target network
 update_target_network = 10000
 # Using huber loss for stability
@@ -101,17 +101,17 @@ while True:  # Run until solved
         frame_count += 1
 
         # Use epsilon-greedy for exploration
-        if frame_count < epsilon_random_frames or epsilon > np.random.rand(1)[0]:
+        #if frame_count < epsilon_random_frames or epsilon > np.random.rand(1)[0]:
             # Take random action
-            action = np.random.choice(num_actions)
-        else:
+        #    action = np.random.choice(num_actions)
+        #else:
             # Predict action Q-values
             # From environment state
-            state_tensor = tf.convert_to_tensor(state)
-            state_tensor = tf.expand_dims(state_tensor, 0)
-            action_probs = model(state_tensor, training=False)
-            # Take best action
-            action = tf.argmax(action_probs[0]).numpy()
+        state_tensor = tf.convert_to_tensor(state)
+        state_tensor = tf.expand_dims(state_tensor, 0)
+        action_probs = model(state_tensor, training=False)
+        # Take best action
+        action = tf.argmax(action_probs[0]).numpy()
 
         # Decay probability of taking random action
         epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -148,7 +148,7 @@ while True:  # Run until solved
 
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
-            future_rewards = model_target.predict(state_next_sample)
+            future_rewards = model_target.predict(state_next_sample) #future_qs_list
             # Q value = reward + discount factor * expected future reward
             updated_q_values = rewards_sample + gamma * tf.reduce_max(
                 future_rewards, axis=1
@@ -169,9 +169,9 @@ while True:  # Run until solved
                 # Calculate loss between new Q-value and old Q-value
                 loss = loss_function(updated_q_values, q_action)
 
-            # Backpropagation
-            grads = tape.gradient(loss, model.trainable_variables)
-            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+                # Backpropagation
+                grads = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         if frame_count % update_target_network == 0:
             # update the the target network with new weights
@@ -199,6 +199,6 @@ while True:  # Run until solved
 
     episode_count += 1
 
-    if running_reward > 40:  # Condition to consider the task solved
+    if running_reward > 4000:  # Condition to consider the task solved
         print("Solved at episode {}!".format(episode_count))
         break

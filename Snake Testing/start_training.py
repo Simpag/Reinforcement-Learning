@@ -355,20 +355,15 @@ def f2(i):
 version = 2
 if __name__ == "__main__":
     # replay_memory_test2 replaces current 32-512 since min replay size was wrong....
-    #learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
-    #epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
-    #batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-    #target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
-    learning_rates = []
-    epsilon_decays = []
-    batch_sizes    = list(reversed([1, 2, 4, 8, 16, 32, 64, 128, 256, 512]))
-    target_updates = []
+    learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
+    epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
+    batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+    target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
     replay_memories = [32, 64, 128, 512, 1000, 2500, 5000, 7500, 10_000, 12_500, 15_000, 20_000, 25_000, 50_000]
-    replay_memories2 = [32, 64, 128, 512]
 
 
-    #total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)
-    total_length = len(replay_memories2)+len(replay_memories)+len(batch_sizes)
+    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)
+    #total_length = len(replay_memories2)+len(replay_memories)+len(batch_sizes)
 
     #tf.config.set_visible_devices([], 'GPU')
 
