@@ -135,7 +135,7 @@ class DDQNAgent():
         # TODO understand this [0] stuff (probably because reshape(-1,...) is an unknown length)
         #return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0, use_multiprocessing=True)[0]
         #state = np.array(state).reshape(-1, *state.shape)/255
-        state_tensor = tf.convert_to_tensor(state)
+        state_tensor = tf.convert_to_tensor(np.array(state)/255)
         state_tensor = tf.expand_dims(state_tensor, 0)
         action_probs = self.model(state_tensor, training=False)
         return tf.argmax(action_probs[0]).numpy()

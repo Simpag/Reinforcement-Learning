@@ -1,7 +1,7 @@
 import getopt, sys
 
 
-def start_test(file_name, env_name):
+def start_test(file_name, env_name, sleep_time):
     import numpy as np
     import gym
     import gym_snake
@@ -37,11 +37,17 @@ def start_test(file_name, env_name):
                 done = False
                 episode_reward = 0
                 while not done:
-                    action = np.argmax(model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0)[0])
+                    #action = np.argmax(model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0)[0])
+                    state_tensor = tf.convert_to_tensor(np.array(state)/255)
+                    state_tensor = tf.expand_dims(state_tensor, 0)
+                    action_probs = model(state_tensor, training=False)
+                    action = tf.argmax(action_probs[0]).numpy()
                     next_state, reward, done, _ = env.step(action)
                     state = next_state
                     episode_reward += reward
-                    env.render()
+                    env.render('human')
+                    if sleep_time is not None:
+                        time.sleep(sleep_time)
 
                     if platform == "win32":
                         if keyboard.is_pressed("q"):
@@ -66,13 +72,14 @@ if __name__ == "__main__":
     argumentList = sys.argv[1:]
     
     # Options
-    options = "hf:e:"
+    options = "hf:e:s:"
     
     # Long options
-    long_options = ["Help", "File=", "Env="]
+    long_options = ["Help", "File=", "Env=", "Fps="]
 
     env_name = None
     file_name = None
+    sleep_time = None
 
     try:
         # Parsing argument
@@ -87,6 +94,8 @@ if __name__ == "__main__":
                 file_name = currentValue
             elif currentArgument in ("-e", "--Env"):
                 env_name = currentValue
+            elif currentArgument in ("-s", "--Fps"):
+                sleep_time = 1/float(currentValue)
 
         if file_name is not None:
             if env_name is None: 
@@ -94,7 +103,7 @@ if __name__ == "__main__":
                 print("python start_testing.py -f FILE_NAME -e ENV_NAME")
                 print("Example: python start_testing.py -f models/Snake_16x16_____9.00max____0.18avg___-1.00min__1675760303.model/ -e Snake-16x16-v0")
             else: 
-                start_test(file_name, env_name)
+                start_test(file_name, env_name, sleep_time)
                 
                 
     except getopt.error as err:

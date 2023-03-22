@@ -19,7 +19,7 @@ import gym_snake
 # To enable multiple processes or something idk, just run it before the script
 # export PATH="${PATH}:/usr/local/nvidia/bin:/usr/local/cuda/bin"
 
-def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
+def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, hl = 128, episodes=15_000):
     from DQNAgent import DQNAgent
 
     # Model settings
@@ -31,7 +31,7 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 15_000                   # Total training episodes
+    EPISODES = episodes                  # Total training episodes
     MINIBATCH_SIZE = bs#32              # How many steps to use for training
 
     #  Stats settings
@@ -65,7 +65,7 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
     #env = gym.make("Snake-16x16-4a-v0")
     env = gym.make("Snake-16x16-8a-v0")
 
-    agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
+    agent = DQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD, HIDDEN_LAYERS=hl)
 
     for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes', position=it, desc=tqdm_name):
         # Update tensorboard step every episode
@@ -84,12 +84,19 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
         while not done:
             if np.random.random() > epsilon:
                 # Get action from DQN
-                action = np.argmax(agent.get_qs(current_state))
+                action = agent.get_action(current_state)
             else:
                 # Get random action
                 action = np.random.randint(0, env.action_space.n)
 
             new_state, reward, done, truncated = env.step(action)
+            steps_without_reward += 1
+
+            if reward > 0:
+                steps_without_reward = 0
+
+            if steps_without_reward > 100:
+                reward -= 0.1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -128,7 +135,7 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
 
     return 0
 
-def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
+def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000):
     # USING CER agent
     from CERDQNAgent import CERDQNAgent
 
@@ -141,7 +148,7 @@ def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 15_000                   # Total training episodes
+    EPISODES = episodes                 # Total training episodes
     MINIBATCH_SIZE = bs#32              # How many steps to use for training
 
     #  Stats settings
@@ -188,12 +195,19 @@ def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000):
         while not done:
             if np.random.random() > epsilon:
                 # Get action from DQN
-                action = np.argmax(agent.get_qs(current_state))
+                action = agent.get_action(current_state)
             else:
                 # Get random action
                 action = np.random.randint(0, env.action_space.n)
 
             new_state, reward, done, truncated = env.step(action)
+            steps_without_reward += 1
+
+            if reward > 0:
+                steps_without_reward = 0
+
+            if steps_without_reward > 100:
+                reward -= 0.1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -282,6 +296,33 @@ def frm2(replay_memory, it):
     gc.collect()        # without this I get mad memory leak
     K.clear_session()   # without this I get mad memory leak
 
+def fhl(hidden_layer, it):
+    if not os.path.isdir(f'models/hidden_layers_test{version}/8a_hl{hidden_layer}'):
+        os.makedirs(f'models/hidden_layers_test{version}/8a_hl{hidden_layer}')
+    main(folder=f"hidden_layers_test{version}/8a_hl{hidden_layer}", lr=0.001, ed=0.9995, bs=32, tu=10, it=it, tqdm_name=f'hl_{hidden_layer}', hl=hidden_layer)
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
+
+def test1(it):
+    # cer bs 2
+    # normal bs 1
+    if not os.path.isdir(f'models/test{version}/test1'):
+        os.makedirs(f'models/test{version}/test1')
+    else:
+        return
+    main(folder=f"test{version}/test1", lr=1e-5, ed=0.999995, bs=1, tu=500, it=it, tqdm_name=f'test1', hl=256, rm=5_000, episodes=500_000)
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
+
+def test2(it):
+    if not os.path.isdir(f'models/test{version}/test2'):
+        os.makedirs(f'models/test{version}/test2')
+    else:
+        return
+    main2(folder=f"test{version}/test2", lr=1e-5, ed=0.999995, bs=32, tu=500, it=it, tqdm_name=f'test2', rm=5_000, episodes=500_000)
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
+
 def f(i):
     """if i % 24 < 4:
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -331,46 +372,51 @@ def f(i):
     else:
         i -= len(target_updates)
 
-
-def f2(i):
-    if i >= 4:
-        tf.config.set_visible_devices([], 'GPU') # only run 4 on gpu
+    if i < len(replay_memories):
+        ftu(replay_memories[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates))
+        return
     else:
-        gpus = tf.config.experimental.list_physical_devices('GPU')
-        if gpus:
-            try:
-                for gpu in gpus:
-                    tf.config.experimental.set_memory_growth(gpu, True)
-            except RuntimeError as e:
-                print(e)
+        i -= len(replay_memories)
 
-    if i < len(batch_sizes):
-        fbs2(batch_sizes[i], it=i)
-    elif i-len(batch_sizes) < len(replay_memories2):
-        frm(replay_memories2[i-len(batch_sizes)], it=i)
+    if i < len(hidden_layers):
+        fhl(hidden_layers[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories))
+        return
     else:
-        frm2(replay_memories[i-len(replay_memories2)-len(batch_sizes)], it=i)
+        i -= len(hidden_layers)
+
+    if i < 1:
+        test1(it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers))
+        return
+    else:
+        test2(i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers))
+        return
 
 
 version = 2
 if __name__ == "__main__":
     # replay_memory_test2 replaces current 32-512 since min replay size was wrong....
-    learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
-    epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
-    batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-    target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
-    replay_memories = [32, 64, 128, 512, 1000, 2500, 5000, 7500, 10_000, 12_500, 15_000, 20_000, 25_000, 50_000]
+    #learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
+    #epsilon_decays = [0.9, 0.99, 0.995, 0.999, 0.9995, 0.9999, 0.99995]
+    #batch_sizes    = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+    #target_updates = [5, 10, 50, 100, 200, 300, 500, 750, 1000, 2000, 5000] # number of TERMINAL states before update
+    #replay_memories = [32, 64, 128, 512, 1000, 2500, 5000, 7500, 10_000, 12_500, 15_000, 20_000, 25_000, 50_000]
+
+    learning_rates = []
+    epsilon_decays = []
+    batch_sizes    = []
+    target_updates = [] # number of TERMINAL states before update
+    replay_memories = []
+    hidden_layers = []
 
 
-    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)
-    #total_length = len(replay_memories2)+len(replay_memories)+len(batch_sizes)
+    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers)+2
 
     #tf.config.set_visible_devices([], 'GPU')
 
-    #with Pool(24) as p:
-    #    p.map(f, list(range(total_length)))
-    
-    with Pool(18) as p:
-        p.map(f2, list(range(total_length)))
+    print(f'Total length: {total_length}')
+
+    with Pool(min(24, total_length)) as p:
+        p.map(f, list(range(total_length)))
+
     
     

@@ -22,13 +22,13 @@ def main(profiler = None):
     # Model settings
     MODEL_NAME = "Testing_improvements"
     MODEL_TO_LOAD = None                # Load model from file, (None = wont load)
-    TARGET_MODEL_UPDATE_CYCLE = 5       # Number of terminal states before updating target model
+    TARGET_MODEL_UPDATE_CYCLE = 100     # Number of terminal states before updating target model
     REPLAY_MEMORY_SIZE = 25_000         # How big the batch size should be
     MIN_REPLAY_MEMORY_SIZE = 1_000      # Number of steps recorded before training starts
 
     # Training settings
     STARTING_EPISODE = 1                # Which episode to start from (should be 1 unless continued training on a model)
-    EPISODES = 100#20_000                   # Total training episodes
+    EPISODES = 20_000                   # Total training episodes
     MINIBATCH_SIZE = 32                 # How many steps to use for training
 
     #  Stats settings
@@ -38,11 +38,11 @@ def main(profiler = None):
 
     # DQ-settings
     DISCOUNT = 0.99                     # gamma (discount factor)
-    LEARNING_RATE = 0.001
+    LEARNING_RATE = 0.00001
 
     # Exploration settings
     epsilon = 1                         # Not a constant, going to be decayed
-    EPSILON_DECAY = 0.9999 #0.99975 #0.95
+    EPSILON_DECAY = 0.99995 #0.99975 #0.95
     MIN_EPSILON = 0.001
 
     # For more repetitive results
