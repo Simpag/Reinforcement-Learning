@@ -19,7 +19,10 @@ def test(model, env, episodes):
             done = False
             episode_reward = 0
             while not done:
-                action = np.argmax(model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0)[0])
+                state_tensor = tf.convert_to_tensor(np.array(state)/255)
+                state_tensor = tf.expand_dims(state_tensor, 0)
+                action_probs = model(state_tensor, training=False)
+                action = tf.argmax(action_probs[0]).numpy()
                 next_state, reward, done, _ = env.step(action)
                 state = next_state
                 episode_reward += reward

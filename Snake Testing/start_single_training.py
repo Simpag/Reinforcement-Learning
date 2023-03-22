@@ -78,7 +78,7 @@ def main():
         while not done:
             if np.random.random() > epsilon:
                 # Get action from DQN
-                action = np.argmax(agent.get_qs(current_state))
+                action = agent.get_action(current_state)
             else:
                 # Get random action
                 action = np.random.randint(0, env.action_space.n)

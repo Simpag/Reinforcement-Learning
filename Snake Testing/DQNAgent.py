@@ -11,10 +11,13 @@ from keras.models import Sequential, save_model, load_model
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout, Activation
 from keras.optimizers import Adam
 from keras import backend as K
+
+import tensorflow as tf
+
 import gc
 
 class DQNAgent():
-    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None) -> None:
+    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None, HIDDEN_LAYERS = 128) -> None:
         # DQ variables
         self.DISCOUNT = DISCOUNT
         self._lr = LEARNING_RATE
@@ -23,6 +26,8 @@ class DQNAgent():
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
         self.MIN_REPLAY_MEMORY_SIZE = MIN_REPLAY_MEMORY_SIZE
         self.MINIBATCH_SIZE = MINIBATCH_SIZE
+
+        self.HIDDEN_LAYERS = HIDDEN_LAYERS
 
         # Custom tensorboard object
         if LOG_DIR is None:
@@ -45,7 +50,7 @@ class DQNAgent():
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_update_cycle = TARGET_MODEL_UPDATE_CYCLE # How many episodes before it updates
 
-        self._clear_memory_at = 1
+        self._clear_memory_at = 10
         self._clear_memory_counter = 1
     """
     def create_model(self, env: gym.Env):
@@ -99,7 +104,7 @@ class DQNAgent():
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(self.HIDDEN_LAYERS, activation='relu'))
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
@@ -120,12 +125,14 @@ class DQNAgent():
 
         # Get current states from minibatch, then query NN model for Q values
         current_states = np.array([transition[0] for transition in minibatch])/255
-        current_qs_list = self.model.predict(current_states, verbose=0)
+        current_qs_list = self.model(current_states).numpy()
+        #current_qs_list = self.model.predict(current_states, verbose=0)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
         new_current_states = np.array([transition[3] for transition in minibatch])/255
-        future_qs_list = self.target_model.predict(new_current_states, verbose=0)
+        future_qs_list = self.target_model(new_current_states, training=False).numpy()
+        #future_qs_list = self.target_model.predict(new_current_states, verbose=0)
 
         X = [] # left side of network
         y = [] # right side of network
@@ -168,9 +175,14 @@ class DQNAgent():
             self._clear_memory_counter = 0
 
     # Queries main network for Q values given current observation space (environment state)
-    def get_qs(self, state):
+    def get_action(self, state):
         # TODO understand this [0] stuff (probably because reshape(-1,...) is an unknown length)
-        return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0)[0]
+        #return self.model.predict(np.array(state).reshape(-1, *state.shape)/255, verbose=0, use_multiprocessing=True)[0]
+        #state = np.array(state).reshape(-1, *state.shape)/255
+        state_tensor = tf.convert_to_tensor(np.array(state)/255)
+        state_tensor = tf.expand_dims(state_tensor, 0)
+        action_probs = self.model(state_tensor, training=False)
+        return tf.argmax(action_probs[0]).numpy()
 
     def save(self, filename):
         # Create models folder
