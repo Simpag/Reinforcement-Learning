@@ -16,7 +16,7 @@ def start_test(file_name, env_name, sleep_time):
     tf.config.set_visible_devices([], 'GPU')
 
     # For more repetitive results
-    ENV_SEED = 1
+    ENV_SEED = np.random.randint(1,100000)
     random.seed(ENV_SEED)
     np.random.seed(ENV_SEED)
     tf.random.set_seed(ENV_SEED)

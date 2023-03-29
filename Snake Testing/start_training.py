@@ -96,7 +96,7 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, hl = 128, episodes=
                 steps_without_reward = 0
 
             if steps_without_reward > 100:
-                reward -= 0.1
+                reward -= 1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -207,7 +207,7 @@ def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000):
                 steps_without_reward = 0
 
             if steps_without_reward > 100:
-                reward -= 0.1
+                reward -= 1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -392,7 +392,7 @@ def f(i):
         return
 
 
-version = 2
+version = "_negative_reward"
 if __name__ == "__main__":
     # replay_memory_test2 replaces current 32-512 since min replay size was wrong....
     #learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
