@@ -6,12 +6,13 @@ import gym
 from neural import MarioNet
 from collections import deque
 
+from apex import amp
 
 class Mario:
-    def __init__(self, env: gym.Env, discount_factor: float, learning_rate: float, target_model_update: int, replay_memory_size: int, minibatch_size:int, exploration_rate, exploration_rate_decay, exploration_rate_min, use_gpu, cer_agent: bool, burn_in: int, dense_layer: int, save_dir, checkpoint=None):
+    def __init__(self, env: gym.Env, discount_factor: float=0.9, learning_rate: float=0.00001, target_model_update: int=500, replay_memory_size: int=2.5e4, minibatch_size:int=32, exploration_rate=1, exploration_rate_decay=0.9999999, exploration_rate_min=0.01, use_gpu: bool=False, cer_agent: bool=False, burn_in: int=1e5, dense_layer: int=512, save_dir=None, checkpoint=None):
         self.state_dim = env.observation_space.shape
         self.action_dim = env.action_space.n
-        self.memory = deque(maxlen=replay_memory_size)
+        self.memory = deque(maxlen=int(replay_memory_size))
         self.batch_size = minibatch_size
 
         self.exploration_rate = exploration_rate
@@ -34,13 +35,17 @@ class Mario:
 
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
         self.net = MarioNet(self.state_dim, self.action_dim, dense_layer).float()
-        if self.use_cuda:
+        if self.use_cuda and torch.cuda.is_available():
             self.net = self.net.to(device='cuda')
         if checkpoint:
             self.load(checkpoint)
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=learning_rate)
         self.loss_fn = torch.nn.SmoothL1Loss()
+
+        # Initialize apex (TPU processing)
+        self.net.target, self.optimizer = amp.initialize(self.net.target, self.optimizer, opt_level="O1")
+        self.net.online, self.optimizer = amp.initialize(self.net.online, self.optimizer, opt_level="O1")
 
 
     def act(self, state):
@@ -118,7 +123,9 @@ class Mario:
     def update_Q_online(self, td_estimate, td_target) :
         loss = self.loss_fn(td_estimate, td_target)
         self.optimizer.zero_grad()
-        loss.backward()
+        with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+            scaled_loss.backward()
+        #loss.backward()
         self.optimizer.step()
         return loss.item()
 
@@ -127,7 +134,7 @@ class Mario:
         self.net.target.load_state_dict(self.net.online.state_dict())
 
 
-    def learn(self):
+    def learn(self, end_of_episode):
         if self.curr_step % self.sync_every == 0:
             self.sync_Q_target()
 
@@ -151,6 +158,11 @@ class Mario:
 
         # Backpropagate loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)
+
+        # decrease exploration_rate
+        #if end_of_episode:
+        #    self.exploration_rate *= self.exploration_rate_decay
+        #    self.exploration_rate = max(self.exploration_rate_min, self.exploration_rate)
 
         return (td_est.mean().item(), loss)
 

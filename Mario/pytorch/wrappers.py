@@ -38,6 +38,7 @@ class SkipFrame(gym.Wrapper):
             # Accumulate reward and repeat the same action
             obs, reward, done, info = self.env.step(action)
             total_reward += reward
+
             if done:
                 break
         return obs, total_reward, done, info
