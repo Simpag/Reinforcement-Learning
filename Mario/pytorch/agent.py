@@ -6,10 +6,8 @@ import gym
 from neural import MarioNet
 from collections import deque
 
-from apex import amp
-
 class Mario:
-    def __init__(self, env: gym.Env, discount_factor: float=0.9, learning_rate: float=0.00001, target_model_update: int=500, replay_memory_size: int=2.5e4, minibatch_size:int=32, exploration_rate=1, exploration_rate_decay=0.9999999, exploration_rate_min=0.01, use_gpu: bool=False, cer_agent: bool=False, burn_in: int=1e5, dense_layer: int=512, save_dir=None, checkpoint=None):
+    def __init__(self, env: gym.Env, discount_factor: float=0.9, learning_rate: float=0.00001, target_model_update: int=500, replay_memory_size: int=2.5e4, minibatch_size:int=32, exploration_rate=1, exploration_rate_decay=0.9999999, exploration_rate_min=0.01, use_gpu: bool=False, use_amp: bool= False, cer_agent: bool=False, burn_in: int=1e5, dense_layer: int=512, save_dir=None, checkpoint=None):
         self.state_dim = env.observation_space.shape
         self.action_dim = env.action_space.n
         self.memory = deque(maxlen=int(replay_memory_size))
@@ -30,6 +28,9 @@ class Mario:
 
         #self.use_cuda = torch.cuda.is_available()
         self.use_cuda = use_gpu
+        self.use_amp = use_amp
+
+        self.scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
 
         self.CER = cer_agent # if we should use CER for replay memory
 
@@ -42,10 +43,6 @@ class Mario:
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=learning_rate)
         self.loss_fn = torch.nn.SmoothL1Loss()
-
-        # Initialize apex (TPU processing)
-        self.net.target, self.optimizer = amp.initialize(self.net.target, self.optimizer, opt_level="O1")
-        self.net.online, self.optimizer = amp.initialize(self.net.online, self.optimizer, opt_level="O1")
 
 
     def act(self, state):
@@ -65,7 +62,8 @@ class Mario:
         else:
             state = torch.FloatTensor(state).cuda() if self.use_cuda else torch.FloatTensor(state)
             state = state.unsqueeze(0)
-            action_values = self.net(state, model='online')
+            with torch.cuda.amp.autocast(enabled=self.use_amp):
+                action_values = self.net(state, model='online')
             action_idx = torch.argmax(action_values, axis=1).item()
 
         # decrease exploration_rate
@@ -108,26 +106,37 @@ class Mario:
 
 
     def td_estimate(self, state, action):
-        current_Q = self.net(state, model='online')[np.arange(0, self.batch_size), action] # Q_online(s,a)
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
+            current_Q = self.net(state, model='online')[np.arange(0, self.batch_size), action] # Q_online(s,a)
         return current_Q
 
 
     @torch.no_grad()
     def td_target(self, reward, next_state, done):
-        next_state_Q = self.net(next_state, model='online')
-        best_action = torch.argmax(next_state_Q, axis=1)
-        next_Q = self.net(next_state, model='target')[np.arange(0, self.batch_size), best_action]
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
+            next_state_Q = self.net(next_state, model='online')
+            best_action = torch.argmax(next_state_Q, axis=1)
+            next_Q = self.net(next_state, model='target')[np.arange(0, self.batch_size), best_action]
         return (reward + (1 - done.float()) * self.gamma * next_Q).float()
 
 
     def update_Q_online(self, td_estimate, td_target) :
-        loss = self.loss_fn(td_estimate, td_target)
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
+            loss = self.loss_fn(td_estimate, td_target)
+        self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        self.optimizer.zero_grad()
+
+        return loss.item()
+        """loss = self.loss_fn(td_estimate, td_target)
         self.optimizer.zero_grad()
         with amp.scale_loss(loss, self.optimizer) as scaled_loss:
             scaled_loss.backward()
+
         #loss.backward()
         self.optimizer.step()
-        return loss.item()
+        return loss.item()"""
 
 
     def sync_Q_target(self):
