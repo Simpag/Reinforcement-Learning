@@ -85,7 +85,7 @@ def main(i, name, use_cer, dense_layer, use_gpu=False):
     save_dir.mkdir(parents=True)
 
     checkpoint = None # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
-    mario = Mario(env=env, discount_factor=DISCOUNT, learning_rate=LEARNING_RATE, target_model_update=TARGET_MODEL_UPDATE_CYCLE, replay_memory_size=REPLAY_MEMORY_SIZE, minibatch_size=MINIBATCH_SIZE, exploration_rate=EPSILON, exploration_rate_decay=EPSILON_DECAY, exploration_rate_min=MIN_EPSILON, use_gpu=USE_GPU, use_amp=False, cer_agent=USE_CER, burn_in=BURN_IN, dense_layer=DENSE_LAYER_SIZE, save_dir=save_dir, checkpoint=checkpoint)
+    mario = Mario(env=env, discount_factor=DISCOUNT, learning_rate=LEARNING_RATE, target_model_update=TARGET_MODEL_UPDATE_CYCLE, replay_memory_size=REPLAY_MEMORY_SIZE, minibatch_size=MINIBATCH_SIZE, exploration_rate=EPSILON, exploration_rate_decay=EPSILON_DECAY, exploration_rate_min=MIN_EPSILON, use_gpu=USE_GPU, use_amp=True, cer_agent=USE_CER, burn_in=BURN_IN, dense_layer=DENSE_LAYER_SIZE, save_dir=save_dir, checkpoint=checkpoint)
 
     logger = MetricLogger(save_dir)
 
@@ -173,13 +173,13 @@ if __name__ == "__main__":
     # ram allocation from replay memory:
     # 4 * 84 * 84 * #replay_size*2 * 4 * 10^(-9) gb
 
-    #dense_layers = [512, 1024, 2048]
+    dense_layers = [512, 1024, 2048]
 
-    #for i in range(len(dense_layers)):
-    #    f(i)
-    #    gc.collect()
+    for i in range(len(dense_layers)):
+        f(i)
+        gc.collect()
 
-    main(i=0, name="Normal2", dense_layer=2048, use_cer=False, use_gpu=False)
+    #main(i=0, name="Normal3", dense_layer=2048, use_cer=False, use_gpu=True)
 
     #with Pool(3) as p:
     #    p.map(f, list(range(len(dense_layers))))

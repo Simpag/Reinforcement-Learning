@@ -31,7 +31,7 @@ env = FrameStack(env, num_stack=4)
 
 env.reset()
 
-checkpoint = Path('checkpoints/CER_512/2023-04-03T20-38-04/mario_net_15000.chkpt')
+checkpoint = Path('trained_model/train1/CER/2023-03-30T01-44-09/mario_net_11000.chkpt')
 mario = Mario(env=env, exploration_rate_min=0.001, checkpoint=checkpoint, dense_layer=512)
 mario.exploration_rate = mario.exploration_rate_min
 
@@ -63,7 +63,7 @@ for e in tqdm(range(episodes), ascii=True, unit='episodes'):
         if done:
             break
 
-        #time.sleep(1/30)
+        time.sleep(1/30)
 
     """logger.log_episode()
 
