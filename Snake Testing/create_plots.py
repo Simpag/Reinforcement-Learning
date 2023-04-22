@@ -70,7 +70,7 @@ def save_plot(location, data):
         mean_steps = np.array(test_data[3])
         y = np.mean(mean_reward/mean_steps)
         plt.bar(name, y)
-
+    
     plt.xticks(rotation=-45)
     plt.grid()
     #plt.tight_layout()
@@ -78,6 +78,7 @@ def save_plot(location, data):
     plt.xlabel('Episodes')
     plt.savefig(f'{location} mean step value.png', bbox_inches="tight")
     plt.clf()
+
 
 
 def get_data(file_collection):
@@ -119,7 +120,7 @@ def get_files():
                 file_path = os.path.join(subdir, filename)
                 
                 variable = filename.split('_')
-                variable = float(variable[-1].replace('.txt',''))
+                variable = float(variable[-1].replace('.txt','')[2:])
 
                 if subdir not in files: # empty
                     files[subdir] = [(variable, file_path)]
