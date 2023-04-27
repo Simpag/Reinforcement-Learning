@@ -1,0 +1,2 @@
+Mean distance: 1215.9333333333334 on data_plots/cer dense layer
+Mean distance: 1534.6 on data_plots/dense layer

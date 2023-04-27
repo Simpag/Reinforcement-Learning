@@ -5,22 +5,27 @@ import matplotlib.pyplot as plt
 from alive_progress import alive_bar
 import numpy as np
 
-def save_plot(location, data):
+def save_plot(location: str, data):
     # data: ('title', episodes, mean reward, mean steps)
     plt.rcParams["figure.figsize"] = (15,10)
     plt.rcParams.update({'font.size': 22})
 
+    location = location.replace('/data', '')
+
     # Reward plots
     for test_data in data:
         name = test_data[0]
+        name = name.replace("data\\", '')
         episodes = test_data[1]
         mean_reward = test_data[2]
-        plt.plot(episodes, mean_reward, label=name)
+        plt.plot(episodes, mean_reward, label=name, linewidth=3)
+
 
     plt.grid()
     #plt.tight_layout()
     plt.xticks([1000*(2*i+1) for i in range(8)])
     plt.xlim((1_000,15_000))
+    plt.ylim((-500, 3500))
     plt.legend(loc='center left', bbox_to_anchor=(1.01, 0.5))
     plt.ylabel('Mean Reward')
     plt.xlabel('Episodes')
@@ -30,9 +35,10 @@ def save_plot(location, data):
     # Steps plots
     for test_data in data:
         name = test_data[0]
+        name = name.replace("data\\", '')
         episodes = test_data[1]
         mean_steps = test_data[3]
-        plt.plot(episodes, mean_steps, label=name)
+        plt.plot(episodes, mean_steps, label=name, linewidth=3)
 
     plt.grid()
     #plt.tight_layout()
@@ -48,10 +54,11 @@ def save_plot(location, data):
     for test_data in data:
         name = test_data[0]
         episodes = test_data[1]
+        name = name.replace("data\\", '')
         mean_reward = np.array(test_data[2])
         mean_steps = np.array(test_data[3])
         y = mean_reward/mean_steps
-        plt.plot(episodes, y, label=name)
+        plt.plot(episodes, y, label=name, linewidth=3)
 
     plt.grid()
     #plt.tight_layout()
@@ -66,6 +73,7 @@ def save_plot(location, data):
     # Mean Step value
     for test_data in data:
         name = test_data[0].split()[-1]
+        name = name.replace("data\\", '')
         mean_reward = np.array(test_data[2])
         mean_steps = np.array(test_data[3])
         y = np.mean(mean_reward/mean_steps)
@@ -78,6 +86,44 @@ def save_plot(location, data):
     plt.xlabel('Episodes')
     plt.savefig(f'{location} mean step value.png', bbox_inches="tight")
     plt.clf()
+
+    # Variance
+    maxl = [-10**6] * len(data[0][2])
+    minl = [10**6] * len(data[0][2])
+    for test_data in data:
+        name = test_data[0]
+        name = name.replace("data\\", '')
+        episodes = test_data[1]
+        mean_reward = test_data[2]
+
+        for i, reward in enumerate(mean_reward):
+            if reward > maxl[i]:
+                maxl[i] = reward
+
+            if reward < minl[i]:
+                minl[i] = reward
+
+    res = np.array(maxl) - np.array(minl)
+        
+    plt.plot(episodes, res, linewidth=3)
+
+    name = 'cer' if location.find('cer') > 0 else 'random'
+
+    saved_plots['variance'].append((episodes, res, name))
+
+    plt.grid()
+    plt.xticks([1000*(2*i+1) for i in range(8)])
+    plt.xlim((1_000,15_000))
+    plt.ylim((0, 3000))
+    #plt.tight_layout()
+    plt.ylabel('Distance') # distance between highest and lowest mean reward for each episode between all network sizes
+    plt.xlabel('Episodes')
+    plt.savefig(f'{location} distance.png', bbox_inches="tight")
+    plt.clf()
+
+    print(f'Mean distance: {np.mean(res)} on {location}')
+
+saved_plots = {'variance': []}
 
 
 def get_data(file_collection):
@@ -148,5 +194,23 @@ with alive_bar(len(data)) as bar:
     for test_name, test_data in data.items():
         save_plot(location=f'{plot_locations}/{test_name}', data=test_data)
         bar()
+
+
+
+####
+for d in saved_plots['variance']:
+    episodes, res, name = d
+    plt.plot(episodes, res, label=name, linewidth=3)
+
+plt.grid()
+plt.xticks([1000*(2*i+1) for i in range(8)])
+plt.xlim((1_000,15_000))
+plt.ylim((0, 3000))
+#plt.tight_layout()
+plt.legend(loc='center left', bbox_to_anchor=(1.01, 0.5))
+plt.ylabel('Distance') # distance between highest and lowest mean reward for each episode between all network sizes
+plt.xlabel('Episodes')
+plt.savefig(f'data_plots/variance.png', bbox_inches="tight")
+plt.clf()
         
 

@@ -65,7 +65,7 @@ def test(name, model_path, dense_layers, i):
     env.reset()
 
     checkpoint = Path(model_path)
-    mario = Mario(env=env, exploration_rate_min=0.0001, checkpoint=checkpoint, dense_layer=dense_layers)
+    mario = Mario(env=env, exploration_rate_min=0.01, checkpoint=checkpoint, dense_layer=dense_layers)
     mario.exploration_rate = mario.exploration_rate_min
 
     total_reward = 0

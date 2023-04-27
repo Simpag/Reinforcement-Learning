@@ -90,13 +90,13 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, hl = 128, episodes=
                 action = np.random.randint(0, env.action_space.n)
 
             new_state, reward, done, truncated = env.step(action)
-            steps_without_reward += 1
+            #steps_without_reward += 1
 
-            if reward > 0:
-                steps_without_reward = 0
+            #if reward > 0:
+            #    steps_without_reward = 0
 
-            if steps_without_reward > 100:
-                reward -= 1
+            #if steps_without_reward > 100:
+            #    reward -= 1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -135,7 +135,7 @@ def main(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, hl = 128, episodes=
 
     return 0
 
-def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000):
+def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000, hl=128):
     # USING CER agent
     from CERDQNAgent import CERDQNAgent
 
@@ -176,7 +176,7 @@ def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000):
 
     env = gym.make("Snake-16x16-8a-v0")
 
-    agent = CERDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD)
+    agent = CERDQNAgent(env, DISCOUNT, LEARNING_RATE, TARGET_MODEL_UPDATE_CYCLE, REPLAY_MEMORY_SIZE, MINIBATCH_SIZE, MIN_REPLAY_MEMORY_SIZE, MODEL_NAME, MODEL_TO_LOAD, HIDDEN_LAYERS=hl)
 
     for episode in tqdm(range(STARTING_EPISODE, EPISODES + 1), ascii=True, unit='episodes', position=it, desc=tqdm_name):
         # Update tensorboard step every episode
@@ -201,13 +201,13 @@ def main2(folder, lr, ed, bs, tu, it, tqdm_name, rm = 25_000, episodes=15_000):
                 action = np.random.randint(0, env.action_space.n)
 
             new_state, reward, done, truncated = env.step(action)
-            steps_without_reward += 1
+            #steps_without_reward += 1
 
-            if reward > 0:
-                steps_without_reward = 0
+            #if reward > 0:
+            #    steps_without_reward = 0
 
-            if steps_without_reward > 100:
-                reward -= 1
+            #if steps_without_reward > 100:
+            #    reward -= 1
 
             # Transform new continous state to new discrete state and count reward
             episode_reward += reward
@@ -296,6 +296,13 @@ def frm2(replay_memory, it):
     gc.collect()        # without this I get mad memory leak
     K.clear_session()   # without this I get mad memory leak
 
+def fhl2(hidden_layer, it):
+    if not os.path.isdir(f'models/cer_hidden_layers_test{version}/8a_hl{hidden_layer}'):
+        os.makedirs(f'models/cer_hidden_layers_test{version}/8a_hl{hidden_layer}')
+    main2(folder=f"cer_hidden_layers_test{version}/8a_hl{hidden_layer}", lr=0.001, ed=0.9995, bs=32, tu=10, it=it, tqdm_name=f'cer_hl_{hidden_layer}', hl=hidden_layer)
+    gc.collect()        # without this I get mad memory leak
+    K.clear_session()   # without this I get mad memory leak
+
 def fhl(hidden_layer, it):
     if not os.path.isdir(f'models/hidden_layers_test{version}/8a_hl{hidden_layer}'):
         os.makedirs(f'models/hidden_layers_test{version}/8a_hl{hidden_layer}')
@@ -303,25 +310,6 @@ def fhl(hidden_layer, it):
     gc.collect()        # without this I get mad memory leak
     K.clear_session()   # without this I get mad memory leak
 
-def test1(it):
-    # cer bs 2
-    # normal bs 1
-    if not os.path.isdir(f'models/test{version}/test1'):
-        os.makedirs(f'models/test{version}/test1')
-    else:
-        return
-    main(folder=f"test{version}/test1", lr=1e-5, ed=0.999995, bs=1, tu=500, it=it, tqdm_name=f'test1', hl=256, rm=5_000, episodes=500_000)
-    gc.collect()        # without this I get mad memory leak
-    K.clear_session()   # without this I get mad memory leak
-
-def test2(it):
-    if not os.path.isdir(f'models/test{version}/test2'):
-        os.makedirs(f'models/test{version}/test2')
-    else:
-        return
-    main2(folder=f"test{version}/test2", lr=1e-5, ed=0.999995, bs=32, tu=500, it=it, tqdm_name=f'test2', rm=5_000, episodes=500_000)
-    gc.collect()        # without this I get mad memory leak
-    K.clear_session()   # without this I get mad memory leak
 
 def f(i):
     """if i % 24 < 4:
@@ -379,20 +367,20 @@ def f(i):
         i -= len(replay_memories)
 
     if i < len(hidden_layers):
-        fhl(hidden_layers[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories))
+        fhl2(hidden_layers[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories))
         return
     else:
         i -= len(hidden_layers)
 
-    if i < 1:
-        test1(it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers))
+    if i < len(h2):
+        fhl(h2[i], it=i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers))
         return
     else:
-        test2(i+len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers))
-        return
+        i -= len(h2)
 
 
-version = "_negative_reward"
+
+version = "_v1"
 if __name__ == "__main__":
     # replay_memory_test2 replaces current 32-512 since min replay size was wrong....
     #learning_rates = [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1]
@@ -406,10 +394,11 @@ if __name__ == "__main__":
     batch_sizes    = []
     target_updates = [] # number of TERMINAL states before update
     replay_memories = []
-    hidden_layers = []
+    hidden_layers = [16, 32, 64, 128, 256, 512, 1024, 2048] #
+    h2 = [1024, 2048]
 
 
-    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers)+2
+    total_length = len(learning_rates)+len(epsilon_decays)+len(batch_sizes)+len(target_updates)+len(replay_memories)+len(hidden_layers)+len(h2)
 
     #tf.config.set_visible_devices([], 'GPU')
 

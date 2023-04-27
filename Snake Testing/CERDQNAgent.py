@@ -15,7 +15,7 @@ from keras import backend as K
 import gc
 
 class CERDQNAgent():
-    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None) -> None:
+    def __init__(self, ENV: gym.Env, DISCOUNT: float, LEARNING_RATE: int, TARGET_MODEL_UPDATE_CYCLE: int, REPLAY_MEMORY_SIZE: int, MINIBATCH_SIZE: int, MIN_REPLAY_MEMORY_SIZE: int, MODEL_NAME: str, MODEL_TO_LOAD = None, LOG_DIR = None, HIDDEN_LAYERS = 128) -> None:
         # DQ variables
         self.DISCOUNT = DISCOUNT
         self._lr = LEARNING_RATE
@@ -25,6 +25,8 @@ class CERDQNAgent():
         self.newest_transition = None
         self.MIN_REPLAY_MEMORY_SIZE = MIN_REPLAY_MEMORY_SIZE
         self.MINIBATCH_SIZE = MINIBATCH_SIZE
+
+        self.HIDDEN_LAYERS = HIDDEN_LAYERS
 
         # Custom tensorboard object
         if LOG_DIR is None:
@@ -61,7 +63,7 @@ class CERDQNAgent():
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(self.HIDDEN_LAYERS, activation='relu'))
 
         model.add(Dense(env.action_space.n, activation='linear'))  # ACTION_SPACE_SIZE = how many choices
         model.compile(loss="mse", optimizer=Adam(learning_rate=self._lr), metrics=['accuracy'])
